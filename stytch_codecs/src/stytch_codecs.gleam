@@ -45,7 +45,7 @@ pub fn stytch_client_error_decoder() -> decode.Decoder(StytchClientError) {
   ))
 }
 
-// ===== =====
+// ============================================================================
 pub type MagicLinkLoginOrCreateRequest {
   MagicLinkLoginOrCreateRequest(email: String)
 }
@@ -66,7 +66,7 @@ pub fn magic_link_login_or_create_request_decoder() -> decode.Decoder(
   decode.success(MagicLinkLoginOrCreateRequest(email:))
 }
 
-// ===== =====
+// ============================================================================
 pub type MagicLinkLoginOrCreateResponse {
   MagicLinkLoginOrCreateResponse(
     status_code: Int,
@@ -74,6 +74,23 @@ pub type MagicLinkLoginOrCreateResponse {
     user_id: String,
     email_id: String,
   )
+}
+
+pub fn magic_link_login_or_create_response_to_json(
+  magic_link_login_or_create_response: MagicLinkLoginOrCreateResponse,
+) -> json.Json {
+  let MagicLinkLoginOrCreateResponse(
+    status_code:,
+    request_id:,
+    user_id:,
+    email_id:,
+  ) = magic_link_login_or_create_response
+  json.object([
+    #("status_code", json.int(status_code)),
+    #("request_id", json.string(request_id)),
+    #("user_id", json.string(user_id)),
+    #("email_id", json.string(email_id)),
+  ])
 }
 
 pub fn magic_link_login_or_create_response_decoder() -> decode.Decoder(
@@ -91,7 +108,7 @@ pub fn magic_link_login_or_create_response_decoder() -> decode.Decoder(
   ))
 }
 
-// ===== =====
+// ============================================================================
 pub type TokenAuthenticateRequest {
   TokenAuthenticateRequest(token: String, session_duration_minutes: Int)
 }
@@ -118,7 +135,7 @@ pub fn token_authenticate_request_decoder() -> decode.Decoder(
   decode.success(TokenAuthenticateRequest(token:, session_duration_minutes:))
 }
 
-// ===== =====
+// ============================================================================
 pub type SessionTokenAuthenticateRequest {
   SessionTokenAuthenticateRequest(
     session_token: String,
@@ -151,7 +168,7 @@ pub fn session_token_authenticate_request_decoder() -> decode.Decoder(
   ))
 }
 
-// ===== =====
+// ============================================================================
 pub type MagicLinkAuthenticateResponse {
   MagicLinkAuthenticateResponse(
     status_code: Int,
@@ -204,7 +221,7 @@ pub fn magic_link_authenticate_response_decoder() -> decode.Decoder(
   ))
 }
 
-// ===== =====
+// ============================================================================
 pub type SessionAuthenticateResponse {
   SessionAuthenticateResponse(
     status_code: Int,
@@ -251,7 +268,7 @@ pub fn session_authenticate_response_decoder() -> decode.Decoder(
   ))
 }
 
-// ===== =====
+// ============================================================================
 pub type SessionRevokeRequest {
   SessionRevokeRequest(session_token: String)
 }
@@ -270,7 +287,7 @@ pub fn session_revoke_request_decoder() -> decode.Decoder(SessionRevokeRequest) 
   decode.success(SessionRevokeRequest(session_token:))
 }
 
-// ===== =====
+// ============================================================================
 pub type SessionRevokeResponse {
   SessionRevokeResponse(request_id: String, status_code: Int)
 }
@@ -293,7 +310,7 @@ pub fn session_revoke_response_decoder() -> decode.Decoder(
   decode.success(SessionRevokeResponse(request_id:, status_code:))
 }
 
-// ===== =====
+// ============================================================================
 pub type StytchUser {
   StytchUser(user_id: String, name: Name, emails: List(Email))
 }
@@ -314,7 +331,7 @@ pub fn stytch_user_decoder() -> decode.Decoder(StytchUser) {
   decode.success(StytchUser(user_id:, name:, emails:))
 }
 
-// ===== =====
+// ============================================================================
 pub type Name {
   Name(first_name: String, middle_name: String, last_name: String)
 }
@@ -335,7 +352,7 @@ pub fn name_decoder() -> decode.Decoder(Name) {
   decode.success(Name(first_name:, middle_name:, last_name:))
 }
 
-// ===== =====
+// ============================================================================
 pub type Email {
   Email(email_id: String, email: String, verified: Bool)
 }
