@@ -1,24 +1,11 @@
 # stytch_codecs
 
-[![Package Version](https://img.shields.io/hexpm/v/stytch_codecs)](https://hex.pm/packages/stytch_codecs)
-[![Hex Docs](https://img.shields.io/badge/hex-docs-ffaff3)](https://hexdocs.pm/stytch_codecs/)
+Shared types used to construct requests to or responses from the
+[Stytch](https://stytch.com) authentication service.
 
-```sh
-gleam add stytch_codecs@1
-```
-```gleam
-import stytch_codecs
+Currently contains all types needed to support magic link authentication
+requests.
 
-pub fn main() -> Nil {
-  // TODO: An example of the project in use
-}
-```
-
-Further documentation can be found at <https://hexdocs.pm/stytch_codecs>.
-
-## Development
-
-```sh
-gleam run   # Run the project
-gleam test  # Run the tests
-```
+These will mostly be used by your API that calls into Stytch client, but this
+package exists for those cases where you want to parse a Stytch response in
+your Gleam frontend.

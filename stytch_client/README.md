@@ -1,24 +1,10 @@
 # stytch_client
 
-[![Package Version](https://img.shields.io/hexpm/v/stytch_client)](https://hex.pm/packages/stytch_client)
-[![Hex Docs](https://img.shields.io/badge/hex-docs-ffaff3)](https://hexdocs.pm/stytch_client/)
+This package contains a simple type to hold the [Stytch](https://stytch.com)
+authentication platform's login credentials, and functions to access various
+platform APIs with those credentials.
 
-```sh
-gleam add stytch_client@1
-```
-```gleam
-import stytch_client
+At the moment, only magic link auth is supported.
 
-pub fn main() -> Nil {
-  // TODO: An example of the project in use
-}
-```
-
-Further documentation can be found at <https://hexdocs.pm/stytch_client>.
-
-## Development
-
-```sh
-gleam run   # Run the project
-gleam test  # Run the tests
-```
+There is an [example](../example) repository showing a complete full stack
+lustre application working with this package.
