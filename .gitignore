@@ -2,3 +2,6 @@
 *.ez
 **/build
 erl_crash.dump
+example/client/.lustre/bin/bun-darwin-aarch64
+example/server/priv/static
+example/server/.env
