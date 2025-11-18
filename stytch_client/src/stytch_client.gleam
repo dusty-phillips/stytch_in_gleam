@@ -1,0 +1,203 @@
+import gleam/bit_array
+import gleam/dynamic/decode
+import gleam/http
+import gleam/http/request
+import gleam/http/response
+import gleam/httpc
+import gleam/json
+import gleam/result
+import stytch_codecs
+import wisp
+
+// Types
+pub opaque type StytchClient {
+  Test(project_id: String, secret: String)
+  Live(project_id: String, secret: String)
+}
+
+pub type StytchError {
+  HttpcError(httpc.HttpError)
+  DecodeError(decode.DecodeError)
+  JsonError(json.DecodeError)
+  ClientError(stytch_codecs.StytchClientError)
+}
+
+// Constructors
+pub fn new_test(project_id: String, secret: String) -> StytchClient {
+  Test(project_id:, secret:)
+}
+
+pub fn new_live(project_id: String, secret: String) -> StytchClient {
+  Live(project_id:, secret:)
+}
+
+// Public interfaces
+pub fn magic_link_login_or_create(
+  client: StytchClient,
+  email: String,
+) -> Result(stytch_codecs.MagicLinkLoginOrCreateResponse, StytchError) {
+  let data =
+    [#("email", json.string(email))]
+    |> json.object()
+
+  let request =
+    make_stytch_request(
+      client,
+      http.Post,
+      "/v1/magic_links/email/login_or_create",
+      data,
+    )
+
+  use response <- result.try(
+    httpc.send(request) |> result.map_error(HttpcError),
+  )
+
+  parse_stytch_response(
+    response,
+    stytch_codecs.magic_link_login_or_create_response_decoder(),
+  )
+}
+
+pub fn magic_link_authenticate(
+  client: StytchClient,
+  token: String,
+  session_duration_minutes: Int,
+) -> Result(stytch_codecs.MagicLinkAuthenticateResponse, StytchError) {
+  let data =
+    stytch_codecs.TokenAuthenticateRequest(token, session_duration_minutes)
+    |> stytch_codecs.token_authenticate_request_to_json()
+
+  let request =
+    make_stytch_request(client, http.Post, "/v1/magic_links/authenticate", data)
+
+  use response <- result.try(
+    httpc.send(request) |> result.map_error(HttpcError),
+  )
+
+  parse_stytch_response(
+    response,
+    stytch_codecs.magic_link_authenticate_response_decoder(),
+  )
+}
+
+pub fn session_authenticate(
+  client: StytchClient,
+  token: String,
+  session_duration_minutes: Int,
+) -> Result(stytch_codecs.SessionAuthenticateResponse, StytchError) {
+  let data =
+    stytch_codecs.SessionTokenAuthenticateRequest(
+      token,
+      session_duration_minutes,
+    )
+    |> stytch_codecs.session_token_authenticate_request_to_json()
+
+  let request =
+    make_stytch_request(client, http.Post, "/v1/sessions/authenticate", data)
+
+  use response <- result.try(
+    httpc.send(request) |> result.map_error(HttpcError),
+  )
+
+  parse_stytch_response(
+    response,
+    stytch_codecs.session_authenticate_response_decoder(),
+  )
+}
+
+pub fn session_revoke(
+  client: StytchClient,
+  token: String,
+) -> Result(stytch_codecs.SessionRevokeResponse, StytchError) {
+  let data =
+    stytch_codecs.SessionRevokeRequest(token)
+    |> stytch_codecs.session_revoke_request_to_json()
+
+  let request =
+    make_stytch_request(client, http.Post, "/v1/sessions/revoke", data)
+
+  use response <- result.try(
+    httpc.send(request) |> result.map_error(HttpcError),
+  )
+
+  parse_stytch_response(
+    response,
+    stytch_codecs.session_revoke_response_decoder(),
+  )
+}
+
+// Public Helpers
+pub fn stytch_error_to_response(stytch_error: StytchError) -> wisp.Response {
+  case stytch_error {
+    ClientError(error) ->
+      stytch_codecs.stytch_client_error_to_json(error)
+      |> json.to_string()
+      |> wisp.json_response(error.status_code)
+    HttpcError(_) -> wisp.response(502)
+    DecodeError(_) | JsonError(_) -> wisp.internal_server_error()
+  }
+}
+
+// Internal Helpers
+fn make_stytch_request(
+  client: StytchClient,
+  method: http.Method,
+  path: String,
+  data: json.Json,
+) -> request.Request(String) {
+  request.new()
+  |> request.set_scheme(http.Https)
+  |> request.set_host(client_to_host(client))
+  |> request.set_path(path)
+  |> request.set_method(method)
+  |> add_basic_auth(client)
+  |> request.set_header("Content-Type", "application/json")
+  |> request.set_body(json.to_string(data))
+}
+
+fn client_to_host(stytch_client: StytchClient) -> String {
+  case stytch_client {
+    Test(..) -> "test.stytch.com"
+    Live(..) -> "api.stytch.com"
+  }
+}
+
+fn add_basic_auth(
+  req: request.Request(body),
+  stytch_client: StytchClient,
+) -> request.Request(body) {
+  let credentials = stytch_client.project_id <> ":" <> stytch_client.secret
+  let encoded = bit_array.base64_encode(<<credentials:utf8>>, True)
+
+  request.set_header(req, "authorization", "Basic " <> encoded)
+}
+
+fn parse_stytch_response(
+  response: response.Response(String),
+  success_decoder: decode.Decoder(data),
+) -> Result(data, StytchError) {
+  case response.status {
+    200 -> parse_stytch_success(response, success_decoder)
+    _ ->
+      // Todo: 100 and 300 error codes will be unhappy but what would one do with them?
+      parse_stytch_error(response)
+  }
+}
+
+fn parse_stytch_success(
+  response: response.Response(String),
+  decoder: decode.Decoder(data),
+) -> Result(data, StytchError) {
+  response.body
+  |> json.parse(using: decoder)
+  |> result.map_error(JsonError)
+}
+
+fn parse_stytch_error(
+  response: response.Response(String),
+) -> Result(a, StytchError) {
+  response.body
+  |> json.parse(using: stytch_codecs.stytch_client_error_decoder())
+  |> result.map_error(JsonError)
+  |> result.try(fn(parse_ok) { Error(ClientError(parse_ok)) })
+}
