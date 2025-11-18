@@ -10,8 +10,11 @@ import stytch_codecs
 
 // Types
 pub opaque type StytchClient {
-  Test(project_id: String, secret: String)
-  Live(project_id: String, secret: String)
+  StytchClient(
+    project_id: String,
+    secret: String,
+    environment: StytchEnvironment,
+  )
 }
 
 pub type StytchError {
@@ -21,13 +24,18 @@ pub type StytchError {
   ClientError(stytch_codecs.StytchClientError)
 }
 
+type StytchEnvironment {
+  Test
+  Live
+}
+
 // Constructors
 pub fn new_test(project_id: String, secret: String) -> StytchClient {
-  Test(project_id:, secret:)
+  StytchClient(project_id:, secret:, environment: Test)
 }
 
 pub fn new_live(project_id: String, secret: String) -> StytchClient {
-  Live(project_id:, secret:)
+  StytchClient(project_id:, secret:, environment: Live)
 }
 
 // Public interfaces
@@ -143,9 +151,9 @@ fn make_stytch_request(
 }
 
 fn client_to_host(stytch_client: StytchClient) -> String {
-  case stytch_client {
-    Test(..) -> "test.stytch.com"
-    Live(..) -> "api.stytch.com"
+  case stytch_client.environment {
+    Test -> "test.stytch.com"
+    Live -> "api.stytch.com"
   }
 }
 
