@@ -7,7 +7,6 @@ import gleam/httpc
 import gleam/json
 import gleam/result
 import stytch_codecs
-import wisp
 
 // Types
 pub opaque type StytchClient {
@@ -124,18 +123,6 @@ pub fn session_revoke(
     response,
     stytch_codecs.session_revoke_response_decoder(),
   )
-}
-
-// Public Helpers
-pub fn stytch_error_to_response(stytch_error: StytchError) -> wisp.Response {
-  case stytch_error {
-    ClientError(error) ->
-      stytch_codecs.stytch_client_error_to_json(error)
-      |> json.to_string()
-      |> wisp.json_response(error.status_code)
-    HttpcError(_) -> wisp.response(502)
-    DecodeError(_) | JsonError(_) -> wisp.internal_server_error()
-  }
 }
 
 // Internal Helpers
