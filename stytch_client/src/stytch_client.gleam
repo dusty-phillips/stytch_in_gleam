@@ -157,7 +157,8 @@ fn client_to_host(stytch_client: StytchClient) -> String {
   }
 }
 
-fn add_basic_auth(
+@internal
+pub fn add_basic_auth(
   req: request.Request(body),
   stytch_client: StytchClient,
 ) -> request.Request(body) {
@@ -167,7 +168,8 @@ fn add_basic_auth(
   request.set_header(req, "authorization", "Basic " <> encoded)
 }
 
-fn parse_stytch_response(
+@internal
+pub fn parse_stytch_response(
   response: response.Response(String),
   success_decoder: decode.Decoder(data),
 ) -> Result(data, StytchError) {
