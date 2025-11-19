@@ -14,6 +14,8 @@ There are two separate gleam packages:
   package so the types can be used in JavaScript frontends that call your API.
 - [stytch_client](./stytch_client/) contains strongly typed Gleam functions
   that call the stytch API.
+- [stytch_ui_model](./stytch_ui_model/) contains lustre model types and update functions
+  for managing your authenticated app in the frontend.
 
 In addition, there is an [example](./example/) folder that contains a fully
 working magic link demo.

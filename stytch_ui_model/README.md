@@ -1,24 +1,19 @@
 # stytch_ui_model
 
-[![Package Version](https://img.shields.io/hexpm/v/stytch_ui_model)](https://hex.pm/packages/stytch_ui_model)
-[![Hex Docs](https://img.shields.io/badge/hex-docs-ffaff3)](https://hexdocs.pm/stytch_ui_model/)
+Lustre model and update function for authenticating part of your state using
+Stytch magic links.
 
-```sh
-gleam add stytch_ui_model@1
-```
-```gleam
-import stytch_ui_model
+Assumes your backend has a specific url structure:
 
-pub fn main() -> Nil {
-  // TODO: An example of the project in use
-}
-```
+- You provide a prefix such as `https://mydomain.com/api`
+- You implement routes for:
+  - /send_sign_in_link
+  - /me
+  - /sign_out
+  - /authenticate (called by stytch, not this package)
 
-Further documentation can be found at <https://hexdocs.pm/stytch_ui_model>.
+You'll also need to hook up some view components to call the update method in
+this package.
 
-## Development
-
-```sh
-gleam run   # Run the project
-gleam test  # Run the tests
-```
+See example lustre [views](../example/client/src/auth_views.gleam) and
+[client](../example/client/src/client.gleam) to get started.
