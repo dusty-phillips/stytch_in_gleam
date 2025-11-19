@@ -1,15 +1,15 @@
 import gleam/json
 import gleam/list
 import gleam/result
-import lustre/attribute
 import lustre/effect
-import lustre/element
-import lustre/element/html
-import lustre/event
 import rsvp
 import stytch_codecs
 
 pub type AuthModel(model) {
+  AuthModel(api_url: String, state: AuthState(model))
+}
+
+pub type AuthState(model) {
   Authenticating
   Unauthenticated(email: String)
   WaitingForMagicLink(email: String)
@@ -27,12 +27,16 @@ pub type AuthMsg {
   UserClickedSignOut
 }
 
+pub fn new(api_url: String) {
+  AuthModel(api_url, Authenticating)
+}
+
 pub fn update_auth(
   model: AuthModel(model),
   message: AuthMsg,
   init_authenticated: fn() -> model,
 ) -> #(AuthModel(model), effect.Effect(AuthMsg)) {
-  case model, message {
+  let #(next_state, effect) = case model.state, message {
     Authenticating, ApiConfirmsUnauthenticated -> #(
       Unauthenticated(""),
       effect.none(),
@@ -57,7 +61,7 @@ pub fn update_auth(
 
     Unauthenticated(email), UserClickedSendMagicLink -> #(
       WaitingForMagicLink(email:),
-      send_sign_in_link(email),
+      send_sign_in_link(model.api_url, email),
     )
 
     WaitingForMagicLink(email), ApiSentMagicLink(Ok(_)) -> #(
@@ -65,19 +69,24 @@ pub fn update_auth(
       effect.none(),
     )
 
-    Authenticated(..), UserClickedSignOut -> #(Unauthenticated(""), sign_out())
+    Authenticated(..), UserClickedSignOut -> #(
+      Unauthenticated(""),
+      sign_out(model.api_url),
+    )
 
-    Authenticating, _ -> #(model, effect.none())
-    Unauthenticated(_), _ -> #(model, effect.none())
-    Authenticated(..), _ -> #(model, effect.none())
-    WaitingForMagicLink(_), _ -> #(model, effect.none())
+    Authenticating, _ -> #(model.state, effect.none())
+    Unauthenticated(_), _ -> #(model.state, effect.none())
+    Authenticated(..), _ -> #(model.state, effect.none())
+    WaitingForMagicLink(_), _ -> #(model.state, effect.none())
   }
+
+  #(AuthModel(..model, state: next_state), effect)
 }
 
 // API calls
 
-fn send_sign_in_link(email: String) -> effect.Effect(AuthMsg) {
-  let url = "http://localhost:3000/api/send_sign_in_link"
+fn send_sign_in_link(api_url: String, email: String) -> effect.Effect(AuthMsg) {
+  let url = api_url <> "/send_sign_in_link"
 
   let json =
     stytch_codecs.MagicLinkLoginOrCreateRequest(email:)
@@ -92,8 +101,8 @@ fn send_sign_in_link(email: String) -> effect.Effect(AuthMsg) {
   rsvp.post(url, json, handler)
 }
 
-pub fn get_me() -> effect.Effect(AuthMsg) {
-  let url = "http://localhost:3000/api/me"
+pub fn get_me(api_url: String) -> effect.Effect(AuthMsg) {
+  let url = api_url <> "/me"
 
   let handler =
     rsvp.expect_any_response(fn(result) {
@@ -115,8 +124,8 @@ pub fn get_me() -> effect.Effect(AuthMsg) {
   rsvp.get(url, handler)
 }
 
-fn sign_out() -> effect.Effect(AuthMsg) {
-  let url = "http://localhost:3000/api/sign_out"
+fn sign_out(api_url: String) -> effect.Effect(AuthMsg) {
+  let url = api_url <> "/sign_out"
 
   let handler = rsvp.expect_ok_response(fn(_) { ApiConfirmsUnauthenticated })
 
