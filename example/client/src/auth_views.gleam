@@ -11,7 +11,8 @@ pub fn view_sign_in_button(
     html.input([
       attribute.value(email),
       attribute.placeholder("Enter your e-mail"),
-      event.on_input(fn(email) { stytch_ui_model.UserUpdatedEmail(email) }),
+      event.on_keyup(stytch_ui_model.UserPressedKeyOnEmail),
+      event.on_input(stytch_ui_model.UserUpdatedEmail),
     ]),
     html.button([event.on_click(stytch_ui_model.UserClickedSendMagicLink)], [
       html.text("Sign Up or Log In"),

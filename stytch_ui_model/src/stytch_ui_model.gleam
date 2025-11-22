@@ -20,6 +20,7 @@ pub type AuthMsg {
   ApiConfirmsUnauthenticated
   ApiAuthenticatedUser(user: stytch_codecs.StytchUser)
   UserUpdatedEmail(String)
+  UserPressedKeyOnEmail(String)
   UserClickedSendMagicLink
   ApiSentMagicLink(
     Result(stytch_codecs.MagicLinkLoginOrCreateResponse, rsvp.Error),
@@ -58,6 +59,13 @@ pub fn update_auth(
       Unauthenticated(email),
       effect.none(),
     )
+
+    Unauthenticated(email), UserPressedKeyOnEmail(key) -> {
+      case key {
+        "Enter" -> #(WaitingForMagicLink(email), effect.none())
+        _ -> #(Unauthenticated(email), effect.none())
+      }
+    }
 
     Unauthenticated(email), UserClickedSendMagicLink -> #(
       WaitingForMagicLink(email:),
