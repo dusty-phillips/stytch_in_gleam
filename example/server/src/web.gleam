@@ -12,7 +12,5 @@ pub fn middleware(
 
   use <- wisp.serve_static(request, under: "/static", from: static_directory)
 
-  // todo: serve static
-
   handle_request(request)
 }

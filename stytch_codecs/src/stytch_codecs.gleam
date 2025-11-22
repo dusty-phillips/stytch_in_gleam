@@ -174,7 +174,6 @@ pub type MagicLinkAuthenticateResponse {
     status_code: Int,
     request_id: String,
     user_id: String,
-    // todo: add User type
     method_id: String,
     session_token: String,
     session_jwt: String,
