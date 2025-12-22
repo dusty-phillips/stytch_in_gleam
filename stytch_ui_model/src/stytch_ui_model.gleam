@@ -62,7 +62,10 @@ pub fn update_auth(
 
     Unauthenticated(email), UserPressedKeyOnEmail(key) -> {
       case key {
-        "Enter" -> #(WaitingForMagicLink(email), effect.none())
+        "Enter" -> #(
+          WaitingForMagicLink(email),
+          send_sign_in_link(model.api_url, email),
+        )
         _ -> #(Unauthenticated(email), effect.none())
       }
     }
