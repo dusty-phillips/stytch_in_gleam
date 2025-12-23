@@ -1,6 +1,6 @@
 # Stytch demo
 
-The two folders are three separate Gleam projects that work together as
+The two folders are separate Gleam projects that work together as
 described in the [Lustre full stack
 guide](https://hexdocs.pm/lustre/guide/06-full-stack-applications.html).
 

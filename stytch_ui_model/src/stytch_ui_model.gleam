@@ -5,15 +5,15 @@ import lustre/effect
 import rsvp
 import stytch_codecs
 
-pub type AuthModel(model) {
-  AuthModel(api_url: String, state: AuthState(model))
+pub type AuthModel {
+  AuthModel(api_url: String, state: AuthState)
 }
 
-pub type AuthState(model) {
+pub type AuthState {
   Authenticating
   Unauthenticated(email: String)
   WaitingForMagicLink(email: String)
-  Authenticated(email: String, model: model)
+  Authenticated(email: String)
 }
 
 pub type AuthMsg {
@@ -33,10 +33,9 @@ pub fn new(api_url: String) {
 }
 
 pub fn update_auth(
-  model: AuthModel(model),
+  model: AuthModel,
   message: AuthMsg,
-  init_authenticated: fn() -> model,
-) -> #(AuthModel(model), effect.Effect(AuthMsg)) {
+) -> #(AuthModel, effect.Effect(AuthMsg)) {
   let #(next_state, effect) = case model.state, message {
     Authenticating, ApiConfirmsUnauthenticated -> #(
       Unauthenticated(""),
@@ -46,11 +45,10 @@ pub fn update_auth(
     Authenticating, ApiAuthenticatedUser(user) -> #(
       Authenticated(
         email: user.emails
-          |> list.filter(fn(email) { email.verified })
-          |> list.first
-          |> result.map(fn(email) { email.email })
-          |> result.unwrap(or: "Unknown Email"),
-        model: init_authenticated(),
+        |> list.filter(fn(email) { email.verified })
+        |> list.first
+        |> result.map(fn(email) { email.email })
+        |> result.unwrap(or: "Unknown Email"),
       ),
       effect.none(),
     )
