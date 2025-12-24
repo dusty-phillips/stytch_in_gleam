@@ -5,3 +5,4 @@ erl_crash.dump
 example/client/.lustre/bin/bun-darwin-aarch64
 example/server/priv/static
 example/server/.env
+example/client_with_modem/.lustre/bin/bun-darwin-aarch64
