@@ -79,11 +79,16 @@ fn path_to_route(uri: uri.Uri) -> Route {
 }
 
 fn set_page_from_route(model: Model, route: Route) -> Model {
-  let page = case stytch_ui_model.is_authenticated(model.auth), route {
-    True, Cats -> Show(CatsPage(cats.init_cat_counter()))
-    _, Wibble -> Show(WibblePage)
-    _, Wobble -> Show(WobblePage)
-    False, Cats -> RequiresAuth(route)
+  let page = case
+    stytch_ui_model.is_authenticated(model.auth),
+    route,
+    model.page
+  {
+    True, Cats, Show(CatsPage(_)) -> model.page
+    True, Cats, _ -> Show(CatsPage(cats.init_cat_counter()))
+    _, Wibble, _ -> Show(WibblePage)
+    _, Wobble, _ -> Show(WobblePage)
+    False, Cats, _ -> RequiresAuth(route)
   }
 
   Model(..model, route:, page:)
