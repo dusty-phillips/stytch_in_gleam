@@ -123,7 +123,7 @@ fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
             cats_effect |> effect.map(CatMsg),
           )
         }
-        _ -> panic as "Unexpected CatMsg"
+        _ -> #(model, effect.none())
       }
     }
   }
