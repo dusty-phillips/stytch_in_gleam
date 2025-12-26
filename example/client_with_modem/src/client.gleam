@@ -20,34 +20,44 @@ pub fn main() -> Nil {
 type Route {
   Wibble
   Wobble
-  Auth
   Cats
 }
 
-type RouteModel {
-  EmptyModel
-  CatsModel(cats.CatCounter)
+type Page {
+  WibblePage
+  WobblePage
+  CatsPage(cats.CatCounter)
+}
+
+type AuthGuard {
+  Unknown(route: Route)
+  RequiresAuth(return_to: Route)
+  Show(Page)
 }
 
 type Model {
-  Model(auth: stytch_ui_model.AuthModel, route: Route, model: RouteModel)
+  Model(auth: stytch_ui_model.AuthModel, route: Route, page: AuthGuard)
+}
+
+type Msg {
+  CatMsg(cats.CatMsg)
+  AuthMsg(stytch_ui_model.AuthMsg)
+  RouteChanged(Route)
 }
 
 fn init(_args) -> #(Model, Effect(Msg)) {
   let api_url = "http://localhost:3000/api"
   let route =
     modem.initial_uri()
-    |> result.map(fn(uri) { uri.path_segments(uri.path) })
-    |> fn(path) {
-      case path {
-        Ok(["wibble"]) -> Wibble
-        Ok(["wobble"]) -> Wobble
-        Ok(["cats"]) -> Cats
-        _ -> Auth
-      }
-    }
+    |> result.map(path_to_route)
+    |> result.unwrap(todo as "404 page")
+
   #(
-    Model(stytch_ui_model.new("http://localhost:3000/api"), route, EmptyModel),
+    Model(
+      stytch_ui_model.new("http://localhost:3000/api"),
+      route,
+      Unknown(route),
+    ),
     effect.batch([
       stytch_ui_model.get_me(api_url) |> effect.map(AuthMsg),
       modem.init(on_url_change),
@@ -56,140 +66,111 @@ fn init(_args) -> #(Model, Effect(Msg)) {
 }
 
 fn on_url_change(uri: uri.Uri) -> Msg {
+  uri |> path_to_route |> RouteChanged
+}
+
+fn path_to_route(uri: uri.Uri) -> Route {
   case uri.path_segments(uri.path) {
-    ["wibble"] -> OnRouteChange(Wibble)
-    ["wobble"] -> OnRouteChange(Wobble)
-    ["cats"] -> OnRouteChange(Cats)
-    _ -> OnRouteChange(Auth)
+    ["wibble"] -> Wibble
+    ["wobble"] -> Wobble
+    ["cats"] -> Cats
+    _ -> todo as "404 page"
   }
 }
 
-type Msg {
-  CatMsg(cats.CatMsg)
-  AuthMsg(stytch_ui_model.AuthMsg)
-  OnRouteChange(Route)
+fn set_page_from_route(model: Model, route: Route) -> Model {
+  let page = case stytch_ui_model.is_authenticated(model.auth), route {
+    True, Cats -> Show(CatsPage(cats.init_cat_counter()))
+    _, Wibble -> Show(WibblePage)
+    _, Wobble -> Show(WobblePage)
+    False, Cats -> RequiresAuth(route)
+  }
+
+  Model(..model, route:, page:)
 }
 
 fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
   echo msg
-  case model, msg {
-    Model(auth_model, ..),
-      AuthMsg(stytch_ui_model.UserClickedSignOut as auth_msg)
-    -> {
-      let #(next_auth, effect) =
-        stytch_ui_model.update_auth(auth_model, auth_msg)
+  case msg {
+    RouteChanged(route) -> #(set_page_from_route(model, route), effect.none())
+
+    AuthMsg(auth_msg) -> {
+      let #(next_auth, auth_effect) =
+        stytch_ui_model.update_auth(model.auth, auth_msg)
+
       #(
-        Model(..model, auth: next_auth, model: EmptyModel),
-        effect.map(effect, AuthMsg),
+        set_page_from_route(Model(..model, auth: next_auth), model.route),
+        auth_effect |> effect.map(AuthMsg),
       )
     }
 
-    Model(auth_model, Auth, ..), AuthMsg(auth_msg) -> {
-      let #(next_auth, effect) =
-        stytch_ui_model.update_auth(auth_model, auth_msg)
-      #(Model(..model, auth: next_auth), effect.map(effect, AuthMsg))
+    CatMsg(cat_msg) -> {
+      echo cat_msg
+      echo model.page
+
+      case model.page {
+        Show(CatsPage(cat_counter)) -> {
+          let #(next_cats, cats_effect) =
+            cats.update_cat_counter(cat_counter, cat_msg)
+
+          #(
+            Model(..model, page: Show(CatsPage(next_cats))),
+            cats_effect |> effect.map(CatMsg),
+          )
+        }
+        _ -> panic as "Unexpected CatMsg"
+      }
     }
-
-    Model(
-      stytch_ui_model.AuthModel(state: stytch_ui_model.Authenticated(..), ..) as auth,
-      Cats,
-      CatsModel(cat_counter),
-    ),
-      CatMsg(cat_msg)
-    -> {
-      let #(next_model, effect) = cats.update_cat_counter(cat_counter, cat_msg)
-      #(Model(auth, Cats, CatsModel(next_model)), effect |> effect.map(CatMsg))
-    }
-
-    Model(auth:, route: _, model: _), OnRouteChange(Wibble) -> #(
-      Model(auth, Wibble, EmptyModel),
-      effect.none(),
-    )
-
-    Model(auth:, route: _, model: _), OnRouteChange(Wobble) -> #(
-      Model(auth, Wobble, EmptyModel),
-      effect.none(),
-    )
-
-    Model(auth:, route: _, model: _), OnRouteChange(Auth) -> #(
-      Model(auth, Auth, EmptyModel),
-      effect.none(),
-    )
-
-    Model(
-      stytch_ui_model.AuthModel(state: stytch_ui_model.Authenticated(..), ..) as auth,
-      route: _,
-      model: _,
-    ),
-      OnRouteChange(Cats)
-    -> #(Model(auth, Cats, CatsModel(cats.init_cat_counter())), effect.none())
-
-    Model(auth:, route: _, model: _), OnRouteChange(Cats) -> #(
-      Model(auth, Cats, EmptyModel),
-      effect.none(),
-    )
-
-    // haven't decided best way to handle the "got a message that didn't match current state" cases.
-    // panic seems heavy, but silent dropping seems bad too. (should be impossible but...)
-    Model(stytch_ui_model.AuthModel(..), ..), AuthMsg(_) -> #(
-      model,
-      effect.none(),
-    )
-
-    Model(stytch_ui_model.AuthModel(..), ..), CatMsg(_) -> #(
-      model,
-      effect.none(),
-    )
   }
 }
 
 fn view(model: Model) -> Element(Msg) {
-  let Model(stytch_ui_model.AuthModel(state:, ..), route:, model: data) = model
+  let Model(stytch_ui_model.AuthModel(state:, ..), page:, ..) = model
   html.div([], [
-    nav_bar(),
-    case state, route, data {
-      _, Wibble, _ -> html.div([], [html.text("wibble")])
+    nav_bar(model.auth),
+    case page {
+      Show(WibblePage) -> html.div([], [html.text("wibble")])
 
-      _, Wobble, _ -> html.div([], [html.text("wobble")])
+      Show(WobblePage) -> html.div([], [html.text("wobble")])
 
-      stytch_ui_model.Authenticated(email:), Cats, CatsModel(cat_counter) ->
+      Show(CatsPage(cat_counter)) -> {
+        let email = case state {
+          stytch_ui_model.Authenticated(email) -> email
+          _ -> "Esteemed Cat Lover"
+        }
         html.div([], [
           cats.view_cat_model(email, cat_counter) |> element.map(CatMsg),
         ])
+      }
 
-      _, Cats, EmptyModel ->
-        html.div([], [
-          html.text("You must"),
-          html.a([attribute.href("/auth")], [html.text("log in")]),
-        ])
+      Unknown(_) -> html.div([], [html.text("Loading...")])
 
-      // Really don't like that these states can be modelled, even if they
-      // are not intended to be possible
-      _, Cats, CatsModel(_) ->
-        panic as "Unexpected CatsModel state in view on Cats route"
-      _, Auth, CatsModel(_) ->
-        panic as "Unexpected CatsModel state in view on Auth route"
+      RequiresAuth(_) ->
+        case state {
+          stytch_ui_model.Authenticating ->
+            auth_views.view_authenticating() |> element.map(AuthMsg)
 
-      stytch_ui_model.Authenticating, Auth, EmptyModel ->
-        auth_views.view_authenticating() |> element.map(AuthMsg)
+          stytch_ui_model.Unauthenticated(email) ->
+            auth_views.view_sign_in_button(email) |> element.map(AuthMsg)
 
-      stytch_ui_model.Unauthenticated(email), Auth, EmptyModel ->
-        auth_views.view_sign_in_button(email) |> element.map(AuthMsg)
+          stytch_ui_model.WaitingForMagicLink(email) ->
+            auth_views.view_magic_link_sent(email) |> element.map(AuthMsg)
 
-      stytch_ui_model.WaitingForMagicLink(email), Auth, EmptyModel ->
-        auth_views.view_magic_link_sent(email) |> element.map(AuthMsg)
-
-      stytch_ui_model.Authenticated(_), Auth, EmptyModel ->
-        html.div([], [html.text("logged in")])
+          stytch_ui_model.Authenticated(email) ->
+            html.div([], [html.text("Welcome " <> email)])
+        }
     },
   ])
 }
 
-fn nav_bar() -> Element(Msg) {
+fn nav_bar(auth: stytch_ui_model.AuthModel) -> Element(Msg) {
   html.nav([], [
     html.a([attribute.href("/wibble")], [element.text("Go to wibble")]),
     html.a([attribute.href("/wobble")], [element.text("Go to wobble")]),
     html.a([attribute.href("/cats")], [element.text("Go to cats")]),
-    auth_views.view_sign_out_button() |> element.map(AuthMsg),
+    case stytch_ui_model.is_authenticated(auth) {
+      True -> auth_views.view_sign_out_button() |> element.map(AuthMsg)
+      False -> element.none()
+    },
   ])
 }

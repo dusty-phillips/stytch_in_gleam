@@ -92,6 +92,13 @@ pub fn update_auth(
   #(AuthModel(..model, state: next_state), effect)
 }
 
+pub fn is_authenticated(model: AuthModel) -> Bool {
+  case model {
+    AuthModel(state: Authenticated(_), ..) -> True
+    _ -> False
+  }
+}
+
 // API calls
 
 fn send_sign_in_link(api_url: String, email: String) -> effect.Effect(AuthMsg) {
