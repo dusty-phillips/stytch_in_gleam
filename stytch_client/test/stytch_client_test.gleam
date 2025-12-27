@@ -10,13 +10,13 @@ pub fn main() -> Nil {
 }
 
 pub fn add_basic_auth_test() {
-  let client = stytch_client.new_test("test_id", "test_secret")
+  let client = stytch_client.new("project_test-id", "test_secret")
   let req = request.new()
 
   let result = stytch_client.add_basic_auth(req, client)
 
   let auth_header = request.get_header(result, "authorization")
-  assert auth_header == Ok("Basic " <> "dGVzdF9pZDp0ZXN0X3NlY3JldA==")
+  assert auth_header == Ok("Basic " <> "cHJvamVjdF90ZXN0LWlkOnRlc3Rfc2VjcmV0")
 }
 
 pub fn parse_stytch_response_200_test() {

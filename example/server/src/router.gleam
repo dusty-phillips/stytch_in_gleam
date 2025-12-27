@@ -143,10 +143,7 @@ fn handle_sign_out(
 fn test_stytch_client(
   environment: environment.Environment,
 ) -> stytch_client.StytchClient {
-  stytch_client.new_test(
-    environment.stytch_project_id,
-    environment.stytch_secret,
-  )
+  stytch_client.new(environment.stytch_project_id, environment.stytch_secret)
 }
 
 fn stytch_error_to_response(

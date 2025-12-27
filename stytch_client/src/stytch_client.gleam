@@ -30,12 +30,12 @@ type StytchEnvironment {
 }
 
 // Constructors
-pub fn new_test(project_id: String, secret: String) -> StytchClient {
-  StytchClient(project_id:, secret:, environment: Test)
-}
-
-pub fn new_live(project_id: String, secret: String) -> StytchClient {
-  StytchClient(project_id:, secret:, environment: Live)
+pub fn new(project_id: String, secret: String) -> StytchClient {
+  case project_id {
+    "project-test-" <> _ ->
+      StytchClient(project_id:, secret:, environment: Test)
+    _ -> StytchClient(project_id:, secret:, environment: Live)
+  }
 }
 
 // Public interfaces
