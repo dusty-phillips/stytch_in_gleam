@@ -235,7 +235,7 @@ pub type AuthenticateResponse {
   )
 }
 
-pub fn magic_link_authenticate_response_to_json(
+pub fn authenticate_response_to_json(
   magic_link_authenticate_response: AuthenticateResponse,
 ) -> json.Json {
   let AuthenticateResponse(
@@ -256,9 +256,7 @@ pub fn magic_link_authenticate_response_to_json(
   ])
 }
 
-pub fn magic_link_authenticate_response_decoder() -> decode.Decoder(
-  AuthenticateResponse,
-) {
+pub fn authenticate_response_decoder() -> decode.Decoder(AuthenticateResponse) {
   use status_code <- decode.field("status_code", decode.int)
   use request_id <- decode.field("request_id", decode.string)
   use user_id <- decode.field("user_id", decode.string)

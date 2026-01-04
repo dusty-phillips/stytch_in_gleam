@@ -21,6 +21,12 @@ pub fn handle_request(
     http.Post, ["api", "send_sign_in_link"] ->
       handle_send_sign_in_link(environment, request)
 
+    http.Post, ["api", "send_passcode"] ->
+      handle_send_passcode(environment, request)
+
+    http.Post, ["api", "verify_passcode"] ->
+      handle_verify_passcode(environment, request)
+
     http.Get, ["api", "sign_out"] -> handle_sign_out(environment, request)
 
     http.Get, ["api", "me"] -> handle_authenticate_session(environment, request)
@@ -93,6 +99,56 @@ fn handle_send_sign_in_link(
 
   case stytch_response {
     Ok(_) -> wisp.ok()
+    Error(stytch_error) -> stytch_error_to_response(stytch_error)
+  }
+}
+
+fn handle_send_passcode(
+  environment: environment.Environment,
+  request: Request,
+) -> Response {
+  use data <- handler_utils.decode_or_422_response(
+    request,
+    stytch_codecs.passcode_login_or_create_request_decoder(),
+  )
+
+  let stytch_response =
+    environment
+    |> test_stytch_client()
+    |> stytch_client.passcode_login_or_create(data.email)
+
+  case stytch_response {
+    Ok(login_response) ->
+      login_response
+      |> stytch_codecs.login_or_create_response_to_json
+      |> json.to_string
+      |> wisp.json_response(200)
+    Error(stytch_error) -> stytch_error_to_response(stytch_error)
+  }
+}
+
+fn handle_verify_passcode(
+  environment: environment.Environment,
+  request: Request,
+) -> Response {
+  use data <- handler_utils.decode_or_422_response(
+    request,
+    stytch_codecs.passcode_authenticate_request_decoder(),
+  )
+
+  let stytch_response =
+    environment
+    |> test_stytch_client()
+    |> stytch_client.passcode_authenticate(
+      data.code,
+      data.method_id,
+      data.session_duration_minutes,
+    )
+
+  case stytch_response {
+    Ok(auth_response) ->
+      wisp.ok()
+      |> handler_utils.set_session_cookie(auth_response.session_token)
     Error(stytch_error) -> stytch_error_to_response(stytch_error)
   }
 }

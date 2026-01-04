@@ -158,6 +158,7 @@ fn update_passcode(
   passcode_state: PasscodeState,
   msg: PasscodeMsg,
 ) -> #(AuthState, effect.Effect(AuthMsg)) {
+  echo msg
   case passcode_state, msg {
     SendingPasscodeEmail(email), SendingPasscodeEmailMsg(msg) ->
       update_sending_passcode_email(email, msg)
@@ -171,8 +172,8 @@ fn update_passcode(
 
     WaitingForPasscode(..), _ -> #(PasscodeState(passcode_state), effect.none())
 
-    VerifyingPasscode(email), VerifyingPasscodeMsg(msg) ->
-      update_verifying_passcode(email, msg)
+    VerifyingPasscode(_), VerifyingPasscodeMsg(msg) ->
+      update_verifying_passcode(api_url, msg)
     VerifyingPasscode(_), _ -> #(PasscodeState(passcode_state), effect.none())
   }
 }
@@ -181,12 +182,13 @@ fn update_sending_passcode_email(
   email: String,
   msg: SendingPasscodeEmailMsg,
 ) -> #(AuthState, effect.Effect(AuthMsg)) {
+  echo msg
   case msg {
     ApiSentPasscode(Ok(response)) -> #(
       PasscodeState(WaitingForPasscode(email, response.email_id, "")),
       effect.none(),
     )
-    ApiSentPasscode(Error(error)) -> todo
+    ApiSentPasscode(Error(_)) -> todo as "error from passcode endpoint"
   }
 }
 
@@ -211,10 +213,13 @@ fn update_waiting_for_passcode(
 }
 
 fn update_verifying_passcode(
-  email: String,
+  api_url: String,
   msg: VerifyingPasscodeMsg,
 ) -> #(AuthState, effect.Effect(AuthMsg)) {
-  todo
+  case msg {
+    ApiVerifiedPasscode(Ok(_)) -> #(Authenticating, get_me(api_url))
+    ApiVerifiedPasscode(Error(_)) -> todo
+  }
 }
 
 fn update_authenticated(

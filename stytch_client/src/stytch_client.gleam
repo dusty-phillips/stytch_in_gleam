@@ -81,10 +81,7 @@ pub fn magic_link_authenticate(
     httpc.send(request) |> result.map_error(HttpcError),
   )
 
-  parse_stytch_response(
-    response,
-    stytch_codecs.magic_link_authenticate_response_decoder(),
-  )
+  parse_stytch_response(response, stytch_codecs.authenticate_response_decoder())
 }
 
 pub fn passcode_login_or_create(
@@ -134,10 +131,7 @@ pub fn passcode_authenticate(
     httpc.send(request) |> result.map_error(HttpcError),
   )
 
-  parse_stytch_response(
-    response,
-    stytch_codecs.magic_link_authenticate_response_decoder(),
-  )
+  parse_stytch_response(response, stytch_codecs.authenticate_response_decoder())
 }
 
 pub fn session_authenticate(
