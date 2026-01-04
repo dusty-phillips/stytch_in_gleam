@@ -19,13 +19,9 @@ Run the server and it will load this client js.
 
 ## Structure
 
-Most of the interesting work is in the [auth.gleam](./src/auth.gleam) module.
-It includes a variety of Lustre model fields, update functions,
-views, and effects to call the API for actions such as:
+The [auth_views.gleam](./src/auth_views.gleam) file contains views
+rendered by the stytch_ui_model package.
 
-- check if user is logged in
-- send a magic link to sign the user in
-- sign the user out
-
-It uses generics to only allow the model to contain data that requires
-authentication if the user is logged in.
+The main entry point is [client.gleam](./src/client.gleam) shows one way to
+wrap the auth models in a model and integrate them with the init, update, and
+view functions.
