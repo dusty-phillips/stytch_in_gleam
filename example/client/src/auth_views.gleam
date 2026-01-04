@@ -10,15 +10,15 @@ pub fn view_sign_in_button(email: String) -> element.Element(stytch.AuthMsg) {
       attribute.value(email),
       attribute.placeholder("Enter your e-mail"),
       event.on_keyup(fn(key) {
-        stytch.UnauthenticatedMsg(stytch.UserPressedKeyOnEmail(key))
+        stytch.UserPressedKeyOnEmail(key)
       }),
       event.on_input(fn(value) {
-        stytch.UnauthenticatedMsg(stytch.UserUpdatedEmail(value))
+        stytch.UserUpdatedEmail(value)
       }),
     ]),
     html.button(
       [
-        event.on_click(stytch.UnauthenticatedMsg(stytch.UserClickedSend)),
+        event.on_click(stytch.UserClickedSend),
       ],
       [
         html.text("Sign Up or Log In"),
@@ -29,7 +29,7 @@ pub fn view_sign_in_button(email: String) -> element.Element(stytch.AuthMsg) {
 
 pub fn view_sign_out_button() -> element.Element(stytch.AuthMsg) {
   html.button(
-    [event.on_click(stytch.AuthenticatedMsg(stytch.UserClickedSignOut))],
+    [event.on_click(stytch.UserClickedSignOut)],
     [
       html.text("Sign Out"),
     ],

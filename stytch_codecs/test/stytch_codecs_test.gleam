@@ -53,7 +53,7 @@ pub fn magic_link_login_or_create_request_test() {
 
 pub fn magic_link_login_or_create_response_test() {
   let value =
-    stytch_codecs.MagicLinkLoginOrCreateResponse(
+    stytch_codecs.LoginOrCreateResponse(
       200,
       "abc_request_id",
       "some_user_id",
@@ -62,8 +62,8 @@ pub fn magic_link_login_or_create_response_test() {
   let round_trip_value =
     round_trip(
       value,
-      stytch_codecs.magic_link_login_or_create_response_to_json,
-      stytch_codecs.magic_link_login_or_create_response_decoder(),
+      stytch_codecs.login_or_create_response_to_json,
+      stytch_codecs.login_or_create_response_decoder(),
     )
 
   assert round_trip_value == Ok(value)
@@ -83,7 +83,7 @@ pub fn token_authenticate_request_test() {
 
 pub fn magic_link_authenticate_response_test() {
   let value =
-    stytch_codecs.MagicLinkAuthenticateResponse(
+    stytch_codecs.AuthenticateResponse(
       404,
       "abcy_request_id",
       "some_user_id",
@@ -95,8 +95,8 @@ pub fn magic_link_authenticate_response_test() {
   let round_trip_value =
     round_trip(
       value,
-      stytch_codecs.magic_link_authenticate_response_to_json,
-      stytch_codecs.magic_link_authenticate_response_decoder(),
+      stytch_codecs.authenticate_response_to_json,
+      stytch_codecs.authenticate_response_decoder(),
     )
 
   assert round_trip_value == Ok(value)

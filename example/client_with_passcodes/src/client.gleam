@@ -38,9 +38,7 @@ type Msg {
 fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
   case model, msg {
     Model(auth_model, ..),
-      AuthMsg(
-        stytch.AuthenticatingMsg(stytch.ApiConfirmsUnauthenticated) as auth_msg,
-      )
+      AuthMsg(stytch.ApiConfirmsUnauthenticated as auth_msg)
     -> {
       let #(next_auth, effect) = stytch.update(auth_model, auth_msg)
       #(
@@ -70,11 +68,11 @@ fn view(model: Model) -> Element(Msg) {
     stytch.Unauthenticated(email) ->
       auth_views.view_sign_in_button(email) |> element.map(AuthMsg)
 
-    stytch.PasscodeState(stytch.SendingPasscodeEmail(email)) ->
+    stytch.SendingPasscodeEmail(email) ->
       auth_views.view_sending_passcode(email) |> element.map(AuthMsg)
-    stytch.PasscodeState(stytch.WaitingForPasscode(email, _email_id, passcode)) ->
+    stytch.WaitingForPasscode(email, _email_id, passcode) ->
       auth_views.view_passcode_sent(email, passcode) |> element.map(AuthMsg)
-    stytch.PasscodeState(stytch.VerifyingPasscode(..)) ->
+    stytch.VerifyingPasscode(..) ->
       auth_views.view_authenticating() |> element.map(AuthMsg)
 
     stytch.Authenticated(user:) ->

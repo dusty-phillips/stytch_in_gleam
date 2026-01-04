@@ -164,7 +164,9 @@ fn view(model: Model) -> Element(Msg) {
               ),
             ])
 
-          stytch.PasscodeState(..) -> panic as "passcode auth not enabled"
+          stytch.SendingPasscodeEmail(_)
+          | stytch.WaitingForPasscode(..)
+          | stytch.VerifyingPasscode(_) -> panic as "passcode auth not enabled"
         }
     },
   ])

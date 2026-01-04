@@ -38,9 +38,7 @@ type Msg {
 fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
   case model, msg {
     Model(auth_model, ..),
-      AuthMsg(
-        stytch.AuthenticatingMsg(stytch.ApiConfirmsUnauthenticated) as auth_msg,
-      )
+      AuthMsg(stytch.ApiConfirmsUnauthenticated as auth_msg)
     -> {
       let #(next_auth, effect) = stytch.update(auth_model, auth_msg)
       #(
@@ -82,6 +80,8 @@ fn view(model: Model) -> Element(Msg) {
         )
           |> element.map(CatMsg),
       ])
-    stytch.PasscodeState(_) -> panic as "Passcode auth not enabled"
+    stytch.SendingPasscodeEmail(_)
+    | stytch.WaitingForPasscode(..)
+    | stytch.VerifyingPasscode(_) -> panic as "Passcode auth not enabled"
   }
 }
