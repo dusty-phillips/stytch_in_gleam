@@ -70,7 +70,7 @@ fn serve_authenticate_magic_link(
     Error(_) -> {
       wisp.response(403)
     }
-    Ok(stytch_codecs.MagicLinkAuthenticateResponse(session_token:, ..)) -> {
+    Ok(stytch_codecs.AuthenticateResponse(session_token:, ..)) -> {
       wisp.redirect("http://localhost:3000")
       |> handler_utils.set_session_cookie(session_token)
     }

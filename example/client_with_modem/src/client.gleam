@@ -1,5 +1,6 @@
 import auth_views
 import cats
+import gleam/list
 import gleam/result
 import gleam/uri
 import lustre
@@ -8,7 +9,7 @@ import lustre/effect.{type Effect}
 import lustre/element.{type Element}
 import lustre/element/html
 import modem
-import stytch_ui_model
+import stytch_ui_model as stytch
 
 pub fn main() -> Nil {
   let app = lustre.application(init, update, view)
@@ -36,12 +37,12 @@ type AuthGuard {
 }
 
 type Model {
-  Model(auth: stytch_ui_model.AuthModel, route: Route, page: AuthGuard)
+  Model(auth: stytch.AuthModel, route: Route, page: AuthGuard)
 }
 
 type Msg {
   CatMsg(cats.CatMsg)
-  AuthMsg(stytch_ui_model.AuthMsg)
+  AuthMsg(stytch.AuthMsg)
   RouteChanged(Route)
 }
 
@@ -50,16 +51,12 @@ fn init(_args) -> #(Model, Effect(Msg)) {
   let route =
     modem.initial_uri()
     |> result.map(path_to_route)
-    |> result.unwrap(todo as "404 page")
+    |> result.lazy_unwrap(fn() { todo as "404 page" })
 
   #(
-    Model(
-      stytch_ui_model.new("http://localhost:3000/api"),
-      route,
-      Unknown(route),
-    ),
+    Model(stytch.new(api_url, stytch.MagicLink), route, Unknown(route)),
     effect.batch([
-      stytch_ui_model.get_me(api_url) |> effect.map(AuthMsg),
+      stytch.get_me(api_url) |> effect.map(AuthMsg),
       modem.init(on_url_change),
     ]),
   )
@@ -79,11 +76,7 @@ fn path_to_route(uri: uri.Uri) -> Route {
 }
 
 fn set_page_from_route(model: Model, route: Route) -> Model {
-  let page = case
-    stytch_ui_model.is_authenticated(model.auth),
-    route,
-    model.page
-  {
+  let page = case stytch.is_authenticated(model.auth), route, model.page {
     True, Cats, Show(CatsPage(_)) -> model.page
     True, Cats, _ -> Show(CatsPage(cats.init_cat_counter()))
     _, Wibble, _ -> Show(WibblePage)
@@ -95,13 +88,11 @@ fn set_page_from_route(model: Model, route: Route) -> Model {
 }
 
 fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
-  echo msg
   case msg {
     RouteChanged(route) -> #(set_page_from_route(model, route), effect.none())
 
     AuthMsg(auth_msg) -> {
-      let #(next_auth, auth_effect) =
-        stytch_ui_model.update_auth(model.auth, auth_msg)
+      let #(next_auth, auth_effect) = stytch.update(model.auth, auth_msg)
 
       #(
         set_page_from_route(Model(..model, auth: next_auth), model.route),
@@ -110,9 +101,6 @@ fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
     }
 
     CatMsg(cat_msg) -> {
-      echo cat_msg
-      echo model.page
-
       case model.page {
         Show(CatsPage(cat_counter)) -> {
           let #(next_cats, cats_effect) =
@@ -130,7 +118,7 @@ fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
 }
 
 fn view(model: Model) -> Element(Msg) {
-  let Model(stytch_ui_model.AuthModel(state:, ..), page:, ..) = model
+  let Model(stytch.AuthModel(state:, ..), page:, ..) = model
   html.div([], [
     nav_bar(model.auth),
     case page {
@@ -140,7 +128,11 @@ fn view(model: Model) -> Element(Msg) {
 
       Show(CatsPage(cat_counter)) -> {
         let email = case state {
-          stytch_ui_model.Authenticated(email) -> email
+          stytch.Authenticated(user) ->
+            user.emails
+            |> list.first
+            |> result.map(fn(email) { email.email })
+            |> result.unwrap("Esteemed Cat Lover")
           _ -> "Esteemed Cat Lover"
         }
         html.div([], [
@@ -152,28 +144,38 @@ fn view(model: Model) -> Element(Msg) {
 
       RequiresAuth(_) ->
         case state {
-          stytch_ui_model.Authenticating ->
+          stytch.Authenticating ->
             auth_views.view_authenticating() |> element.map(AuthMsg)
 
-          stytch_ui_model.Unauthenticated(email) ->
+          stytch.Unauthenticated(email) ->
             auth_views.view_sign_in_button(email) |> element.map(AuthMsg)
 
-          stytch_ui_model.WaitingForMagicLink(email) ->
+          stytch.WaitingForMagicLink(email) ->
             auth_views.view_magic_link_sent(email) |> element.map(AuthMsg)
 
-          stytch_ui_model.Authenticated(email) ->
-            html.div([], [html.text("Welcome " <> email)])
+          stytch.Authenticated(user) ->
+            html.div([], [
+              html.text(
+                "Welcome "
+                <> user.emails
+                |> list.first
+                |> result.map(fn(email) { email.email })
+                |> result.unwrap("Potential Cat Lover"),
+              ),
+            ])
+
+          stytch.PasscodeState(..) -> panic as "passcode auth not enabled"
         }
     },
   ])
 }
 
-fn nav_bar(auth: stytch_ui_model.AuthModel) -> Element(Msg) {
+fn nav_bar(auth: stytch.AuthModel) -> Element(Msg) {
   html.nav([], [
     html.a([attribute.href("/wibble")], [element.text("Go to wibble")]),
     html.a([attribute.href("/wobble")], [element.text("Go to wobble")]),
     html.a([attribute.href("/cats")], [element.text("Go to cats")]),
-    case stytch_ui_model.is_authenticated(auth) {
+    case stytch.is_authenticated(auth) {
       True -> auth_views.view_sign_out_button() |> element.map(AuthMsg)
       False -> element.none()
     },

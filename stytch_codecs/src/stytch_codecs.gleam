@@ -67,8 +67,30 @@ pub fn magic_link_login_or_create_request_decoder() -> decode.Decoder(
 }
 
 // ============================================================================
-pub type MagicLinkLoginOrCreateResponse {
-  MagicLinkLoginOrCreateResponse(
+pub type PasscodeLoginOrCreateRequest {
+  PasscodeLoginOrCreateRequest(email: String)
+}
+
+pub fn passcode_login_or_create_request_to_json(
+  passcode_login_or_create_request: PasscodeLoginOrCreateRequest,
+) -> json.Json {
+  let PasscodeLoginOrCreateRequest(email:) = passcode_login_or_create_request
+  json.object([
+    #("email", json.string(email)),
+  ])
+}
+
+pub fn passcode_login_or_create_request_decoder() -> decode.Decoder(
+  PasscodeLoginOrCreateRequest,
+) {
+  use email <- decode.field("email", decode.string)
+  decode.success(PasscodeLoginOrCreateRequest(email:))
+}
+
+// ============================================================================
+pub type LoginOrCreateResponse {
+  // Used by both magic links and OTP login_or_create
+  LoginOrCreateResponse(
     status_code: Int,
     request_id: String,
     user_id: String,
@@ -76,15 +98,11 @@ pub type MagicLinkLoginOrCreateResponse {
   )
 }
 
-pub fn magic_link_login_or_create_response_to_json(
-  magic_link_login_or_create_response: MagicLinkLoginOrCreateResponse,
+pub fn login_or_create_response_to_json(
+  magic_link_login_or_create_response: LoginOrCreateResponse,
 ) -> json.Json {
-  let MagicLinkLoginOrCreateResponse(
-    status_code:,
-    request_id:,
-    user_id:,
-    email_id:,
-  ) = magic_link_login_or_create_response
+  let LoginOrCreateResponse(status_code:, request_id:, user_id:, email_id:) =
+    magic_link_login_or_create_response
   json.object([
     #("status_code", json.int(status_code)),
     #("request_id", json.string(request_id)),
@@ -93,14 +111,14 @@ pub fn magic_link_login_or_create_response_to_json(
   ])
 }
 
-pub fn magic_link_login_or_create_response_decoder() -> decode.Decoder(
-  MagicLinkLoginOrCreateResponse,
+pub fn login_or_create_response_decoder() -> decode.Decoder(
+  LoginOrCreateResponse,
 ) {
   use status_code <- decode.field("status_code", decode.int)
   use request_id <- decode.field("request_id", decode.string)
   use user_id <- decode.field("user_id", decode.string)
   use email_id <- decode.field("email_id", decode.string)
-  decode.success(MagicLinkLoginOrCreateResponse(
+  decode.success(LoginOrCreateResponse(
     status_code:,
     request_id:,
     user_id:,
@@ -133,6 +151,43 @@ pub fn token_authenticate_request_decoder() -> decode.Decoder(
     decode.int,
   )
   decode.success(TokenAuthenticateRequest(token:, session_duration_minutes:))
+}
+
+// ============================================================================
+pub type PasscodeAuthenticateRequest {
+  PasscodeAuthenticateRequest(
+    code: String,
+    method_id: String,
+    session_duration_minutes: Int,
+  )
+}
+
+pub fn passcode_authenticate_request_to_json(
+  passcode_authenticate_request: PasscodeAuthenticateRequest,
+) -> json.Json {
+  let PasscodeAuthenticateRequest(code:, method_id:, session_duration_minutes:) =
+    passcode_authenticate_request
+  json.object([
+    #("code", json.string(code)),
+    #("method_id", json.string(method_id)),
+    #("session_duration_minutes", json.int(session_duration_minutes)),
+  ])
+}
+
+pub fn passcode_authenticate_request_decoder() -> decode.Decoder(
+  PasscodeAuthenticateRequest,
+) {
+  use code <- decode.field("code", decode.string)
+  use method_id <- decode.field("method_id", decode.string)
+  use session_duration_minutes <- decode.field(
+    "session_duration_minutes",
+    decode.int,
+  )
+  decode.success(PasscodeAuthenticateRequest(
+    code:,
+    method_id:,
+    session_duration_minutes:,
+  ))
 }
 
 // ============================================================================
@@ -169,8 +224,8 @@ pub fn session_token_authenticate_request_decoder() -> decode.Decoder(
 }
 
 // ============================================================================
-pub type MagicLinkAuthenticateResponse {
-  MagicLinkAuthenticateResponse(
+pub type AuthenticateResponse {
+  AuthenticateResponse(
     status_code: Int,
     request_id: String,
     user_id: String,
@@ -181,9 +236,9 @@ pub type MagicLinkAuthenticateResponse {
 }
 
 pub fn magic_link_authenticate_response_to_json(
-  magic_link_authenticate_response: MagicLinkAuthenticateResponse,
+  magic_link_authenticate_response: AuthenticateResponse,
 ) -> json.Json {
-  let MagicLinkAuthenticateResponse(
+  let AuthenticateResponse(
     status_code:,
     request_id:,
     user_id:,
@@ -202,7 +257,7 @@ pub fn magic_link_authenticate_response_to_json(
 }
 
 pub fn magic_link_authenticate_response_decoder() -> decode.Decoder(
-  MagicLinkAuthenticateResponse,
+  AuthenticateResponse,
 ) {
   use status_code <- decode.field("status_code", decode.int)
   use request_id <- decode.field("request_id", decode.string)
@@ -210,7 +265,7 @@ pub fn magic_link_authenticate_response_decoder() -> decode.Decoder(
   use method_id <- decode.field("method_id", decode.string)
   use session_token <- decode.field("session_token", decode.string)
   use session_jwt <- decode.field("session_jwt", decode.string)
-  decode.success(MagicLinkAuthenticateResponse(
+  decode.success(AuthenticateResponse(
     status_code:,
     request_id:,
     user_id:,

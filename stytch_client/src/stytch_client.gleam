@@ -42,7 +42,7 @@ pub fn new(project_id: String, secret: String) -> StytchClient {
 pub fn magic_link_login_or_create(
   client: StytchClient,
   email: String,
-) -> Result(stytch_codecs.MagicLinkLoginOrCreateResponse, StytchError) {
+) -> Result(stytch_codecs.LoginOrCreateResponse, StytchError) {
   let data =
     [#("email", json.string(email))]
     |> json.object()
@@ -61,7 +61,7 @@ pub fn magic_link_login_or_create(
 
   parse_stytch_response(
     response,
-    stytch_codecs.magic_link_login_or_create_response_decoder(),
+    stytch_codecs.login_or_create_response_decoder(),
   )
 }
 
@@ -69,13 +69,66 @@ pub fn magic_link_authenticate(
   client: StytchClient,
   token: String,
   session_duration_minutes: Int,
-) -> Result(stytch_codecs.MagicLinkAuthenticateResponse, StytchError) {
+) -> Result(stytch_codecs.AuthenticateResponse, StytchError) {
   let data =
     stytch_codecs.TokenAuthenticateRequest(token, session_duration_minutes)
     |> stytch_codecs.token_authenticate_request_to_json()
 
   let request =
     make_stytch_request(client, http.Post, "/v1/magic_links/authenticate", data)
+
+  use response <- result.try(
+    httpc.send(request) |> result.map_error(HttpcError),
+  )
+
+  parse_stytch_response(
+    response,
+    stytch_codecs.magic_link_authenticate_response_decoder(),
+  )
+}
+
+pub fn passcode_login_or_create(
+  client: StytchClient,
+  email: String,
+) -> Result(stytch_codecs.LoginOrCreateResponse, StytchError) {
+  let data =
+    [#("email", json.string(email))]
+    |> json.object()
+
+  let request =
+    make_stytch_request(
+      client,
+      http.Post,
+      "/v1/otps/email/login_or_create",
+      data,
+    )
+
+  use response <- result.try(
+    httpc.send(request) |> result.map_error(HttpcError),
+  )
+
+  parse_stytch_response(
+    response,
+    stytch_codecs.login_or_create_response_decoder(),
+  )
+}
+
+pub fn passcode_authenticate(
+  client: StytchClient,
+  code: String,
+  method_id: String,
+  session_duration_minutes: Int,
+) -> Result(stytch_codecs.AuthenticateResponse, StytchError) {
+  let data =
+    stytch_codecs.PasscodeAuthenticateRequest(
+      code,
+      method_id,
+      session_duration_minutes,
+    )
+    |> stytch_codecs.passcode_authenticate_request_to_json()
+
+  let request =
+    make_stytch_request(client, http.Post, "/v1/otps/authenticate", data)
 
   use response <- result.try(
     httpc.send(request) |> result.map_error(HttpcError),
