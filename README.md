@@ -12,11 +12,16 @@ There are three separate gleam packages:
 - [stytch_codecs](./stytch_codecs/) contains types sent to or returned from
   Stytch, along with json encoders and gleam decoders. I made it a separate
   package so the types can be used in JavaScript frontends that call your API.
+  See [![Hex
+  Docs](https://img.shields.io/badge/hex-docs-ffaff3)](https://hexdocs.pm/stytch_codecs/)
+  for documentation.
 - [stytch_client](./stytch_client/) contains strongly typed Gleam functions
   that call the stytch API. It is intended to be called from your backend.
+  API is documented on [![Hex Docs](https://img.shields.io/badge/hex-docs-ffaff3)](https://hexdocs.pm/stytch_client/)
 - [stytch_ui_model](./stytch_ui_model/) contains lustre model types and update functions
   for managing your authenticated app in the frontend. It calls specific
   urls your backend must implement to manage state.
+  _This package has not been released to Hex yet as I am uncomfortable with the devex._
 
 In addition, there is an [example](./example/) folder that contains fully
 working demos of magic link and passcode auth, as well as an example of how

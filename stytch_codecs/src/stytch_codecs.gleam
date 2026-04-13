@@ -1,6 +1,7 @@
 import gleam/dynamic/decode
 import gleam/json
 
+/// Error messages received from the stytch service
 pub type StytchClientError {
   StytchClientError(
     status_code: Int,
@@ -46,6 +47,9 @@ pub fn stytch_client_error_decoder() -> decode.Decoder(StytchClientError) {
 }
 
 // ============================================================================
+/// Request to create a magic link.
+/// When stytch receives this request, it will send an e-mail, authenticate the user
+/// in the clicked link, and redirect back to somewhere in your service.
 pub type MagicLinkLoginOrCreateRequest {
   MagicLinkLoginOrCreateRequest(email: String)
 }
@@ -67,6 +71,9 @@ pub fn magic_link_login_or_create_request_decoder() -> decode.Decoder(
 }
 
 // ============================================================================
+/// Request to log in with a passcode.
+/// When stytch receives this it will send a passcode to the user's e-mail address.
+/// It is up to you to process the passcode and authenticate it with stytch.
 pub type PasscodeLoginOrCreateRequest {
   PasscodeLoginOrCreateRequest(email: String)
 }
@@ -88,8 +95,10 @@ pub fn passcode_login_or_create_request_decoder() -> decode.Decoder(
 }
 
 // ============================================================================
+/// Response to a request to create or log into an account.
+///
+/// Used by both magic links and OTP login_or_create
 pub type LoginOrCreateResponse {
-  // Used by both magic links and OTP login_or_create
   LoginOrCreateResponse(
     status_code: Int,
     request_id: String,
@@ -127,6 +136,7 @@ pub fn login_or_create_response_decoder() -> decode.Decoder(
 }
 
 // ============================================================================
+/// Request to authenticate a stytch token returned from login.
 pub type TokenAuthenticateRequest {
   TokenAuthenticateRequest(token: String, session_duration_minutes: Int)
 }
@@ -224,6 +234,7 @@ pub fn session_token_authenticate_request_decoder() -> decode.Decoder(
 }
 
 // ============================================================================
+/// Response from Stytch when attempting to autenticate with any method.
 pub type AuthenticateResponse {
   AuthenticateResponse(
     status_code: Int,
@@ -321,6 +332,9 @@ pub fn session_authenticate_response_decoder() -> decode.Decoder(
 }
 
 // ============================================================================
+/// Request to revoke a session.
+///
+/// Use for signout.
 pub type SessionRevokeRequest {
   SessionRevokeRequest(session_token: String)
 }
@@ -340,6 +354,7 @@ pub fn session_revoke_request_decoder() -> decode.Decoder(SessionRevokeRequest) 
 }
 
 // ============================================================================
+/// Response from stytch to a request to revoke a given session token.
 pub type SessionRevokeResponse {
   SessionRevokeResponse(request_id: String, status_code: Int)
 }
@@ -384,6 +399,7 @@ pub fn stytch_user_decoder() -> decode.Decoder(StytchUser) {
 }
 
 // ============================================================================
+/// Name identifying a user.
 pub type Name {
   Name(first_name: String, middle_name: String, last_name: String)
 }
@@ -405,6 +421,9 @@ pub fn name_decoder() -> decode.Decoder(Name) {
 }
 
 // ============================================================================
+/// Email identifying a user.
+/// Stytch separates email_id (not PII) from email and indicates whether the user has verified
+/// that they can access that address.
 pub type Email {
   Email(email_id: String, email: String, verified: Bool)
 }

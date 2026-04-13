@@ -9,6 +9,10 @@ import gleam/result
 import stytch_codecs
 
 // Types
+/// Configured stytch client to connect to the stytch service.
+///
+/// The client secret should likely come from an environment variable; it needs
+/// to be protected.
 pub opaque type StytchClient {
   StytchClient(
     project_id: String,
@@ -17,6 +21,7 @@ pub opaque type StytchClient {
   )
 }
 
+/// Various error types that may occur while processing Stytch responses
 pub type StytchError {
   HttpcError(httpc.HttpError)
   DecodeError(decode.DecodeError)
@@ -24,12 +29,16 @@ pub type StytchError {
   ClientError(stytch_codecs.StytchClientError)
 }
 
+/// Stytch has two possible environments.
+/// This type enumerates them.
 type StytchEnvironment {
   Test
   Live
 }
 
-// Constructors
+/// Consturct a new StytchClient given a projcet_id and sercet.
+/// Stytch encodes the environment in the project_id so we can connect
+/// to the correct service when it is called
 pub fn new(project_id: String, secret: String) -> StytchClient {
   case project_id {
     "project-test-" <> _ ->
@@ -38,7 +47,9 @@ pub fn new(project_id: String, secret: String) -> StytchClient {
   }
 }
 
-// Public interfaces
+/// Send a magic link to the (typically user-provided) e-mail address.
+///
+/// This works whether or not the user has previously logged in.
 pub fn magic_link_login_or_create(
   client: StytchClient,
   email: String,
@@ -65,6 +76,7 @@ pub fn magic_link_login_or_create(
   )
 }
 
+/// Authenticate a token returned from Stytch during a magic link redirect flow.
 pub fn magic_link_authenticate(
   client: StytchClient,
   token: String,
@@ -84,6 +96,10 @@ pub fn magic_link_authenticate(
   parse_stytch_response(response, stytch_codecs.authenticate_response_decoder())
 }
 
+/// Create or log in a user using passcode authentication.
+///
+/// Arguably more secure than magic link auth as it avoids sending an
+/// un-verified e-mail to the user.
 pub fn passcode_login_or_create(
   client: StytchClient,
   email: String,
@@ -110,6 +126,7 @@ pub fn passcode_login_or_create(
   )
 }
 
+/// Authenticate the passcode the user entered and pass it to stytch client.
 pub fn passcode_authenticate(
   client: StytchClient,
   code: String,
@@ -134,6 +151,8 @@ pub fn passcode_authenticate(
   parse_stytch_response(response, stytch_codecs.authenticate_response_decoder())
 }
 
+/// Authenticate a session token previously returned from a passcode or magic
+/// link authentication flow.
 pub fn session_authenticate(
   client: StytchClient,
   token: String,
@@ -159,6 +178,9 @@ pub fn session_authenticate(
   )
 }
 
+/// Revoke a session token so it can't be used to sign in again.
+///
+/// Used for signing a user out.
 pub fn session_revoke(
   client: StytchClient,
   token: String,

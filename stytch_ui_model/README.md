@@ -10,10 +10,14 @@ Assumes your backend has a specific url structure:
   - /send_sign_in_link
   - /me
   - /sign_out
-  - /authenticate (called by stytch, not this package)
+  - /authenticate (called by Stytch, not this package)
 
 You'll also need to hook up some view components to call the update method in
 this package.
 
 See example lustre [views](../example/client/src/auth_views.gleam) and
 [client](../example/client/src/client.gleam) to get started.
+
+This package is not yet released to Hex because I'm not comfortable with the
+developer experience. Something feels off and maybe somebody can tell me what
+it is (or better yet, send a non-AI-coded PR).
