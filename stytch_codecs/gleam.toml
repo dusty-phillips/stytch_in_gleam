@@ -1,12 +1,9 @@
 name = "stytch_codecs"
-version = "1.0.0"
+version = "1.0.0-rc1"
 
-# Fill out these fields if you intend to generate HTML documentation or publish
-# your project to the Hex package manager.
-#
-# description = ""
-# licences = ["Apache-2.0"]
-# repository = { type = "github", user = "", repo = "" }
+description = "Shared types for use with the Stytch Authentication API. Magic Link and Passcode auth supported. For use with stytch_client package."
+licences = ["Apache-2.0"]
+repository = { type = "github", user = "dusty-phillips", repo = "stytch_in_gleam" }
 # links = [{ title = "Website", href = "" }]
 #
 # For a full reference of all the available options, you can have a look at
