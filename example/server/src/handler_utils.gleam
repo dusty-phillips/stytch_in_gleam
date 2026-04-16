@@ -58,6 +58,7 @@ pub fn set_session_cookie(
       max_age: option.Some(86_400),
       domain: option.None,
       path: option.Some("/"),
+      // Note: secure: True will not work with localhost Safari
       secure: True,
       http_only: True,
       same_site: option.Some(cookie.Strict),

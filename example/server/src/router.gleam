@@ -77,7 +77,17 @@ fn serve_authenticate_magic_link(
       wisp.response(403)
     }
     Ok(stytch_codecs.AuthenticateResponse(session_token:, ..)) -> {
-      wisp.redirect("http://localhost:3000")
+      // note: Safari doesn't seem to set cookies on 300 response, so returning a 200 with meta-refresh
+      html.html([], [
+        html.head([], [
+          html.meta([
+            attribute.http_equiv("refresh"),
+            attribute.content("0;url=http://localhost:3000"),
+          ]),
+        ]),
+      ])
+      |> element.to_document_string
+      |> wisp.html_response(200)
       |> handler_utils.set_session_cookie(session_token)
     }
   }
@@ -157,6 +167,7 @@ fn handle_authenticate_session(
   environment: environment.Environment,
   request: Request,
 ) -> Response {
+  echo request
   use session_token <- handler_utils.session_token_or_forbidden_response(
     request,
   )
@@ -165,6 +176,8 @@ fn handle_authenticate_session(
     environment
     |> test_stytch_client()
     |> stytch_client.session_authenticate(session_token, 60)
+
+  echo stytch_response
 
   case stytch_response {
     Ok(session_response) ->
