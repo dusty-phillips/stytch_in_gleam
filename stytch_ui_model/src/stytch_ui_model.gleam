@@ -79,7 +79,7 @@ pub type AuthMsg {
   UserClickedSignOut
 }
 
-pub fn new(api_url: String, method: AuthenticationMethod) {
+pub fn new(api_url: String, method: AuthenticationMethod) -> AuthModel {
   AuthModel(api_url, Authenticating, method)
 }
 
@@ -498,17 +498,15 @@ fn browser_passkey_credential(
 fn parse_creation_options(
   options_json: String,
 ) -> Result(public_key.NativeCreationOptions, String) {
-  options_json
-  |> parse_json_string
-  |> public_key.parse_creation_options_from_json
+  use parsed <- result.try(parse_json_string(options_json))
+  public_key.parse_creation_options_from_json(parsed)
 }
 
 fn parse_request_options(
   options_json: String,
 ) -> Result(public_key.NativeRequestOptions, String) {
-  options_json
-  |> parse_json_string
-  |> public_key.parse_request_options_from_json
+  use parsed <- result.try(parse_json_string(options_json))
+  public_key.parse_request_options_from_json(parsed)
 }
 
 pub fn get_me(api_url: String) -> effect.Effect(AuthMsg) {
@@ -545,4 +543,4 @@ fn sign_out(api_url: String) -> effect.Effect(AuthMsg) {
 // Browser FFI (glue only; the WebAuthn ceremony lives in plinth)
 
 @external(javascript, "./stytch_ui_model_ffi.mjs", "parseJson")
-fn parse_json_string(json_string: String) -> json.Json
+fn parse_json_string(json_string: String) -> Result(json.Json, String)
