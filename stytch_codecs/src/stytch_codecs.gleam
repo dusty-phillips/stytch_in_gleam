@@ -1,5 +1,6 @@
 import gleam/dynamic/decode
 import gleam/json
+import gleam/option.{type Option}
 
 /// Error messages received from the stytch service
 pub type StytchClientError {
@@ -332,6 +333,392 @@ pub fn session_authenticate_response_decoder() -> decode.Decoder(
 }
 
 // ============================================================================
+/// Payload sent by a browser after a WebAuthn ceremony. The server is
+/// responsible for adding the authenticated user's id and session policy
+/// before forwarding to Stytch — the browser must not assert identity.
+pub type PasskeyCredentialPayload {
+  PasskeyCredentialPayload(public_key_credential: String)
+}
+
+pub fn passkey_credential_payload_to_json(
+  passkey_credential_payload: PasskeyCredentialPayload,
+) -> json.Json {
+  let PasskeyCredentialPayload(public_key_credential:) =
+    passkey_credential_payload
+  json.object([
+    #("public_key_credential", json.string(public_key_credential)),
+  ])
+}
+
+pub fn passkey_credential_payload_decoder() -> decode.Decoder(
+  PasskeyCredentialPayload,
+) {
+  use public_key_credential <- decode.field(
+    "public_key_credential",
+    decode.string,
+  )
+  decode.success(PasskeyCredentialPayload(public_key_credential:))
+}
+
+// ============================================================================
+/// Start registering a new passkey for a user with a known id.
+pub type PasskeyRegisterStartRequest {
+  PasskeyRegisterStartRequest(
+    user_id: String,
+    domain: String,
+    use_base64_url_encoding: Bool,
+    return_passkey_credential_options: Bool,
+    user_agent: Option(String),
+  )
+}
+
+pub fn passkey_register_start_request_to_json(
+  passkey_register_start_request: PasskeyRegisterStartRequest,
+) -> json.Json {
+  let PasskeyRegisterStartRequest(
+    user_id:,
+    domain:,
+    use_base64_url_encoding:,
+    return_passkey_credential_options:,
+    user_agent:,
+  ) = passkey_register_start_request
+  let user_agent_field = case user_agent {
+    option.Some(user_agent) -> [#("user_agent", json.string(user_agent))]
+    option.None -> []
+  }
+  json.object([
+    #("user_id", json.string(user_id)),
+    #("domain", json.string(domain)),
+    #("use_base64_url_encoding", json.bool(use_base64_url_encoding)),
+    #(
+      "return_passkey_credential_options",
+      json.bool(return_passkey_credential_options),
+    ),
+    ..user_agent_field
+  ])
+}
+
+pub fn passkey_register_start_request_decoder() -> decode.Decoder(
+  PasskeyRegisterStartRequest,
+) {
+  use user_id <- decode.field("user_id", decode.string)
+  use domain <- decode.field("domain", decode.string)
+  use use_base64_url_encoding <- decode.field(
+    "use_base64_url_encoding",
+    decode.bool,
+  )
+  use return_passkey_credential_options <- decode.field(
+    "return_passkey_credential_options",
+    decode.bool,
+  )
+  use user_agent <- decode.optional_field(
+    "user_agent",
+    option.None,
+    decode.map(decode.string, option.Some),
+  )
+  decode.success(PasskeyRegisterStartRequest(
+    user_id:,
+    domain:,
+    use_base64_url_encoding:,
+    return_passkey_credential_options:,
+    user_agent:,
+  ))
+}
+
+// ============================================================================
+/// Response to a request to register a new passkey for an authenticated user.
+pub type PasskeyRegisterStartResponse {
+  PasskeyRegisterStartResponse(
+    request_id: String,
+    user_id: String,
+    public_key_credential_creation_options: String,
+    status_code: Int,
+  )
+}
+
+pub fn passkey_register_start_response_to_json(
+  passkey_register_start_response: PasskeyRegisterStartResponse,
+) -> json.Json {
+  let PasskeyRegisterStartResponse(
+    request_id:,
+    user_id:,
+    public_key_credential_creation_options:,
+    status_code:,
+  ) = passkey_register_start_response
+  json.object([
+    #("request_id", json.string(request_id)),
+    #("user_id", json.string(user_id)),
+    #(
+      "public_key_credential_creation_options",
+      json.string(public_key_credential_creation_options),
+    ),
+    #("status_code", json.int(status_code)),
+  ])
+}
+
+pub fn passkey_register_start_response_decoder() -> decode.Decoder(
+  PasskeyRegisterStartResponse,
+) {
+  use request_id <- decode.field("request_id", decode.string)
+  use user_id <- decode.field("user_id", decode.string)
+  use public_key_credential_creation_options <- decode.field(
+    "public_key_credential_creation_options",
+    decode.string,
+  )
+  use status_code <- decode.field("status_code", decode.int)
+  decode.success(PasskeyRegisterStartResponse(
+    request_id:,
+    user_id:,
+    public_key_credential_creation_options:,
+    status_code:,
+  ))
+}
+
+// ============================================================================
+/// Complete registering a new passkey, passing the credential created by the
+/// browser's `navigator.credentials.create()` call as a JSON string.
+pub type PasskeyRegisterFinishRequest {
+  PasskeyRegisterFinishRequest(
+    user_id: String,
+    public_key_credential: String,
+    session_duration_minutes: Int,
+  )
+}
+
+pub fn passkey_register_finish_request_to_json(
+  passkey_register_finish_request: PasskeyRegisterFinishRequest,
+) -> json.Json {
+  let PasskeyRegisterFinishRequest(
+    user_id:,
+    public_key_credential:,
+    session_duration_minutes:,
+  ) = passkey_register_finish_request
+  json.object([
+    #("user_id", json.string(user_id)),
+    #("public_key_credential", json.string(public_key_credential)),
+    #("session_duration_minutes", json.int(session_duration_minutes)),
+  ])
+}
+
+pub fn passkey_register_finish_request_decoder() -> decode.Decoder(
+  PasskeyRegisterFinishRequest,
+) {
+  use user_id <- decode.field("user_id", decode.string)
+  use public_key_credential <- decode.field(
+    "public_key_credential",
+    decode.string,
+  )
+  use session_duration_minutes <- decode.field(
+    "session_duration_minutes",
+    decode.int,
+  )
+  decode.success(PasskeyRegisterFinishRequest(
+    user_id:,
+    public_key_credential:,
+    session_duration_minutes:,
+  ))
+}
+
+// ============================================================================
+/// Response to a completed passkey registration or authentication. Both Stytch
+/// endpoints return the same shape: session credentials plus the full user.
+pub type PasskeySessionResponse {
+  PasskeySessionResponse(
+    request_id: String,
+    user_id: String,
+    webauthn_registration_id: String,
+    session_token: String,
+    session_jwt: String,
+    user: StytchUser,
+    status_code: Int,
+  )
+}
+
+pub fn passkey_session_response_to_json(
+  passkey_session_response: PasskeySessionResponse,
+) -> json.Json {
+  let PasskeySessionResponse(
+    request_id:,
+    user_id:,
+    webauthn_registration_id:,
+    session_token:,
+    session_jwt:,
+    user:,
+    status_code:,
+  ) = passkey_session_response
+  json.object([
+    #("request_id", json.string(request_id)),
+    #("user_id", json.string(user_id)),
+    #("webauthn_registration_id", json.string(webauthn_registration_id)),
+    #("session_token", json.string(session_token)),
+    #("session_jwt", json.string(session_jwt)),
+    #("user", stytch_user_to_json(user)),
+    #("status_code", json.int(status_code)),
+  ])
+}
+
+pub fn passkey_session_response_decoder() -> decode.Decoder(
+  PasskeySessionResponse,
+) {
+  use request_id <- decode.field("request_id", decode.string)
+  use user_id <- decode.field("user_id", decode.string)
+  use webauthn_registration_id <- decode.field(
+    "webauthn_registration_id",
+    decode.string,
+  )
+  use session_token <- decode.field("session_token", decode.string)
+  use session_jwt <- decode.field("session_jwt", decode.string)
+  use user <- decode.field("user", stytch_user_decoder())
+  use status_code <- decode.field("status_code", decode.int)
+  decode.success(PasskeySessionResponse(
+    request_id:,
+    user_id:,
+    webauthn_registration_id:,
+    session_token:,
+    session_jwt:,
+    user:,
+    status_code:,
+  ))
+}
+
+// ============================================================================
+/// Start authenticating with a passkey. No user_id is supplied; the browser's
+/// passkey picker identifies the user via discoverable credentials.
+pub type PasskeyAuthenticateStartRequest {
+  PasskeyAuthenticateStartRequest(
+    domain: String,
+    use_base64_url_encoding: Bool,
+    return_passkey_credential_options: Bool,
+  )
+}
+
+pub fn passkey_authenticate_start_request_to_json(
+  passkey_authenticate_start_request: PasskeyAuthenticateStartRequest,
+) -> json.Json {
+  let PasskeyAuthenticateStartRequest(
+    domain:,
+    use_base64_url_encoding:,
+    return_passkey_credential_options:,
+  ) = passkey_authenticate_start_request
+  json.object([
+    #("domain", json.string(domain)),
+    #("use_base64_url_encoding", json.bool(use_base64_url_encoding)),
+    #(
+      "return_passkey_credential_options",
+      json.bool(return_passkey_credential_options),
+    ),
+  ])
+}
+
+pub fn passkey_authenticate_start_request_decoder() -> decode.Decoder(
+  PasskeyAuthenticateStartRequest,
+) {
+  use domain <- decode.field("domain", decode.string)
+  use use_base64_url_encoding <- decode.field(
+    "use_base64_url_encoding",
+    decode.bool,
+  )
+  use return_passkey_credential_options <- decode.field(
+    "return_passkey_credential_options",
+    decode.bool,
+  )
+  decode.success(PasskeyAuthenticateStartRequest(
+    domain:,
+    use_base64_url_encoding:,
+    return_passkey_credential_options:,
+  ))
+}
+
+// ============================================================================
+/// Response to a request to start passkey authentication.
+pub type PasskeyAuthenticateStartResponse {
+  PasskeyAuthenticateStartResponse(
+    request_id: String,
+    user_id: String,
+    public_key_credential_request_options: String,
+    status_code: Int,
+  )
+}
+
+pub fn passkey_authenticate_start_response_to_json(
+  passkey_authenticate_start_response: PasskeyAuthenticateStartResponse,
+) -> json.Json {
+  let PasskeyAuthenticateStartResponse(
+    request_id:,
+    user_id:,
+    public_key_credential_request_options:,
+    status_code:,
+  ) = passkey_authenticate_start_response
+  json.object([
+    #("request_id", json.string(request_id)),
+    #("user_id", json.string(user_id)),
+    #(
+      "public_key_credential_request_options",
+      json.string(public_key_credential_request_options),
+    ),
+    #("status_code", json.int(status_code)),
+  ])
+}
+
+pub fn passkey_authenticate_start_response_decoder() -> decode.Decoder(
+  PasskeyAuthenticateStartResponse,
+) {
+  use request_id <- decode.field("request_id", decode.string)
+  use user_id <- decode.field("user_id", decode.string)
+  use public_key_credential_request_options <- decode.field(
+    "public_key_credential_request_options",
+    decode.string,
+  )
+  use status_code <- decode.field("status_code", decode.int)
+  decode.success(PasskeyAuthenticateStartResponse(
+    request_id:,
+    user_id:,
+    public_key_credential_request_options:,
+    status_code:,
+  ))
+}
+
+// ============================================================================
+/// Complete passkey authentication, passing the credential returned by the
+/// browser's `navigator.credentials.get()` call as a JSON string.
+pub type PasskeyAuthenticateRequest {
+  PasskeyAuthenticateRequest(
+    public_key_credential: String,
+    session_duration_minutes: Int,
+  )
+}
+
+pub fn passkey_authenticate_request_to_json(
+  passkey_authenticate_request: PasskeyAuthenticateRequest,
+) -> json.Json {
+  let PasskeyAuthenticateRequest(
+    public_key_credential:,
+    session_duration_minutes:,
+  ) = passkey_authenticate_request
+  json.object([
+    #("public_key_credential", json.string(public_key_credential)),
+    #("session_duration_minutes", json.int(session_duration_minutes)),
+  ])
+}
+
+pub fn passkey_authenticate_request_decoder() -> decode.Decoder(
+  PasskeyAuthenticateRequest,
+) {
+  use public_key_credential <- decode.field(
+    "public_key_credential",
+    decode.string,
+  )
+  use session_duration_minutes <- decode.field(
+    "session_duration_minutes",
+    decode.int,
+  )
+  decode.success(PasskeyAuthenticateRequest(
+    public_key_credential:,
+    session_duration_minutes:,
+  ))
+}
+
+// ============================================================================
 /// Request to revoke a session.
 ///
 /// Use for signout.
@@ -379,15 +766,25 @@ pub fn session_revoke_response_decoder() -> decode.Decoder(
 
 // ============================================================================
 pub type StytchUser {
-  StytchUser(user_id: String, name: Name, emails: List(Email))
+  StytchUser(
+    user_id: String,
+    name: Name,
+    emails: List(Email),
+    webauthn_registrations: List(WebAuthnRegistration),
+  )
 }
 
 pub fn stytch_user_to_json(stytch_user: StytchUser) -> json.Json {
-  let StytchUser(user_id:, name:, emails:) = stytch_user
+  let StytchUser(user_id:, name:, emails:, webauthn_registrations:) =
+    stytch_user
   json.object([
     #("user_id", json.string(user_id)),
     #("name", name_to_json(name)),
     #("emails", json.array(emails, email_to_json)),
+    #(
+      "webauthn_registrations",
+      json.array(webauthn_registrations, webauthn_registration_to_json),
+    ),
   ])
 }
 
@@ -395,7 +792,65 @@ pub fn stytch_user_decoder() -> decode.Decoder(StytchUser) {
   use user_id <- decode.field("user_id", decode.string)
   use name <- decode.field("name", name_decoder())
   use emails <- decode.field("emails", decode.list(email_decoder()))
-  decode.success(StytchUser(user_id:, name:, emails:))
+  use webauthn_registrations <- decode.field(
+    "webauthn_registrations",
+    decode.list(webauthn_registration_decoder()),
+  )
+  decode.success(StytchUser(user_id:, name:, emails:, webauthn_registrations:))
+}
+
+// ============================================================================
+/// A passkey or WebAuthn registration associated with a user.
+pub type WebAuthnRegistration {
+  WebAuthnRegistration(
+    webauthn_registration_id: String,
+    domain: String,
+    user_agent: String,
+    verified: Bool,
+    authenticator_type: String,
+    name: String,
+  )
+}
+
+pub fn webauthn_registration_to_json(
+  webauthn_registration: WebAuthnRegistration,
+) -> json.Json {
+  let WebAuthnRegistration(
+    webauthn_registration_id:,
+    domain:,
+    user_agent:,
+    verified:,
+    authenticator_type:,
+    name:,
+  ) = webauthn_registration
+  json.object([
+    #("webauthn_registration_id", json.string(webauthn_registration_id)),
+    #("domain", json.string(domain)),
+    #("user_agent", json.string(user_agent)),
+    #("verified", json.bool(verified)),
+    #("authenticator_type", json.string(authenticator_type)),
+    #("name", json.string(name)),
+  ])
+}
+
+pub fn webauthn_registration_decoder() -> decode.Decoder(WebAuthnRegistration) {
+  use webauthn_registration_id <- decode.field(
+    "webauthn_registration_id",
+    decode.string,
+  )
+  use domain <- decode.field("domain", decode.string)
+  use user_agent <- decode.field("user_agent", decode.string)
+  use verified <- decode.field("verified", decode.bool)
+  use authenticator_type <- decode.field("authenticator_type", decode.string)
+  use name <- decode.field("name", decode.string)
+  decode.success(WebAuthnRegistration(
+    webauthn_registration_id:,
+    domain:,
+    user_agent:,
+    verified:,
+    authenticator_type:,
+    name:,
+  ))
 }
 
 // ============================================================================

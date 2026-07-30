@@ -128,7 +128,7 @@ fn view(model: Model) -> Element(Msg) {
 
       Show(CatsPage(cat_counter)) -> {
         let email = case state {
-          stytch.Authenticated(user) ->
+          stytch.Authenticated(user:, ..) ->
             user.emails
             |> list.first
             |> result.map(fn(email) { email.email })
@@ -153,7 +153,7 @@ fn view(model: Model) -> Element(Msg) {
           stytch.WaitingForMagicLink(email) ->
             auth_views.view_magic_link_sent(email) |> element.map(AuthMsg)
 
-          stytch.Authenticated(user) ->
+          stytch.Authenticated(user:, ..) ->
             html.div([], [
               html.text(
                 "Welcome "
@@ -167,6 +167,9 @@ fn view(model: Model) -> Element(Msg) {
           stytch.SendingPasscodeEmail(_)
           | stytch.WaitingForPasscode(..)
           | stytch.VerifyingPasscode(_) -> panic as "passcode auth not enabled"
+
+          stytch.PasskeyLoginInProgress ->
+            panic as "passkey login not enabled"
         }
     },
   ])

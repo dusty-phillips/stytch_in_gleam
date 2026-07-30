@@ -6,7 +6,7 @@
 This package wraps the [Stytch](https://stytch.com) authentication service in type-safe
 Gleam code. It is meant to be used in your backend to authenticate users.
 
-At the moment, only magic link and passcode auth are supported.
+Magic link, passcode, and passkey (WebAuthn) auth are supported.
 
 There are [examples](../example) showing a complete full stack lustre
 application working with this package on Wisp backend and several alternative client setups..
@@ -43,3 +43,11 @@ It contains shared types and encoders that you will likely want to use in your U
 10. Run `gleam run` in server package.
 
 Passcode auth is similar, but you'll need slightly different routes.
+
+Passkey auth requires the frontend to run the WebAuthn browser ceremony
+(`navigator.credentials.create/get`). The `stytch_ui_model` package handles
+this for you; on the backend you'll need `start_register_passkey`,
+`finish_register_passkey`, `start_passkey_login`, and `passkey_login` routes
+(see the example server). Passkeys require `return_passkey_credential_options`
+to be enabled at registration so the browser's passkey picker can identify
+the user at login time.

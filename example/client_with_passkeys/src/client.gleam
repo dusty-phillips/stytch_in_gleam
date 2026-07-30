@@ -1,11 +1,11 @@
 import auth_views
-import cats
 import gleam/list
 import gleam/result
 import lustre
 import lustre/effect.{type Effect}
 import lustre/element.{type Element}
 import lustre/element/html
+import stytch_codecs
 import stytch_ui_model as stytch
 
 pub fn main() -> Nil {
@@ -16,51 +16,32 @@ pub fn main() -> Nil {
 }
 
 type Model {
-  Model(auth: stytch.AuthModel, cat_counter: cats.CatCounter)
+  Model(auth: stytch.AuthModel)
 }
 
 fn init(_args) -> #(Model, Effect(Msg)) {
   let api_url = "http://localhost:3000/api"
   #(
-    Model(
-      stytch.new("http://localhost:3000/api", stytch.Passcode),
-      cats.init_cat_counter(),
-    ),
+    Model(stytch.new(api_url, stytch.Passcode)),
     stytch.get_me(api_url) |> effect.map(AuthMsg),
   )
 }
 
 type Msg {
-  CatMsg(cats.CatMsg)
   AuthMsg(stytch.AuthMsg)
 }
 
 fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
   case model, msg {
-    Model(auth_model, ..),
-      AuthMsg(stytch.ApiConfirmsUnauthenticated as auth_msg)
-    -> {
+    Model(auth_model), AuthMsg(auth_msg) -> {
       let #(next_auth, effect) = stytch.update(auth_model, auth_msg)
-      #(
-        Model(auth: next_auth, cat_counter: cats.init_cat_counter()),
-        effect.map(effect, AuthMsg),
-      )
-    }
-
-    Model(auth_model, ..), AuthMsg(auth_msg) -> {
-      let #(next_auth, effect) = stytch.update(auth_model, auth_msg)
-      #(Model(..model, auth: next_auth), effect.map(effect, AuthMsg))
-    }
-
-    Model(auth_model, cat_counter), CatMsg(cat_msg) -> {
-      let #(next_model, effect) = cats.update_cat_counter(cat_counter, cat_msg)
-      #(Model(auth_model, next_model), effect |> effect.map(CatMsg))
+      #(Model(auth: next_auth), effect.map(effect, AuthMsg))
     }
   }
 }
 
 fn view(model: Model) -> Element(Msg) {
-  let Model(stytch.AuthModel(state:, ..), cat_counter:) = model
+  let Model(stytch.AuthModel(state:, ..)) = model
   case state {
     stytch.Authenticating ->
       auth_views.view_authenticating() |> element.map(AuthMsg)
@@ -75,21 +56,28 @@ fn view(model: Model) -> Element(Msg) {
     stytch.VerifyingPasscode(..) ->
       auth_views.view_authenticating() |> element.map(AuthMsg)
 
-    stytch.Authenticated(user:, ..) ->
+    stytch.PasskeyLoginInProgress ->
+      auth_views.view_authenticating() |> element.map(AuthMsg)
+
+    stytch.Authenticated(user:, passkey_state:) ->
       html.div([], [
+        html.text("Logged in as " <> display_name(user)),
         auth_views.view_sign_out_button() |> element.map(AuthMsg),
-        cats.view_cat_model(
-          user.emails
-            |> list.first
-            |> result.map(fn(email) { email.email })
-            |> result.unwrap("Esteemed Cat Lover"),
-          cat_counter,
-        )
-          |> element.map(CatMsg),
+        auth_views.view_passkeys(user, passkey_state) |> element.map(AuthMsg),
       ])
 
     stytch.WaitingForMagicLink(_) -> panic as "magic links not enabled"
+  }
+}
 
-    stytch.PasskeyLoginInProgress -> panic as "passkey login not enabled"
+// Stytch does not collect a name at sign-up, so fall back to the first email.
+fn display_name(user: stytch_codecs.StytchUser) -> String {
+  case user.name.first_name {
+    "" ->
+      user.emails
+      |> list.first
+      |> result.map(fn(email) { email.email })
+      |> result.unwrap("")
+    first_name -> first_name
   }
 }

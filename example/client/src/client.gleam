@@ -68,7 +68,7 @@ fn view(model: Model) -> Element(Msg) {
       auth_views.view_sign_in_button(email) |> element.map(AuthMsg)
     stytch.WaitingForMagicLink(email) ->
       auth_views.view_magic_link_sent(email) |> element.map(AuthMsg)
-    stytch.Authenticated(user:) ->
+    stytch.Authenticated(user:, ..) ->
       html.div([], [
         auth_views.view_sign_out_button() |> element.map(AuthMsg),
         cats.view_cat_model(
@@ -83,5 +83,6 @@ fn view(model: Model) -> Element(Msg) {
     stytch.SendingPasscodeEmail(_)
     | stytch.WaitingForPasscode(..)
     | stytch.VerifyingPasscode(_) -> panic as "Passcode auth not enabled"
+    stytch.PasskeyLoginInProgress -> panic as "passkey login not enabled"
   }
 }

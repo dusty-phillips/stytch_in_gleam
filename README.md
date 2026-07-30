@@ -4,8 +4,8 @@ This repo contains two gleam projects to aid in accessing the
 [Stytch](https://stytch.com) authentication service. Stytch is a developer
 friendly service providing headless (and nearly-headless) authentication APIs.
 
-So far I've only implemented magic link and one time passcode auth. I intend to
-add passkeys, and am open to PRs for other Stytch APIs.
+Magic link, one time passcode, and passkey (WebAuthn) auth are supported.
+I am open to PRs for other Stytch APIs.
 
 There are three separate gleam packages:
 
@@ -38,9 +38,14 @@ auth and modem routes can live together.
    - SECRET_KEY_BASE: random 64 character string (e.g. from `wisp.random_string`)
    - STYTCH_PROJECT_ID: from Stytch dashboard
    - STYTCH_SECRET: from Stytch dashboard
+   - STYTCH_DOMAIN (optional): the WebAuthn relying-party domain for passkeys.
+     Defaults to `localhost`. Set it to your app's domain in production.
 4. Add routes for `send_sign_in_link`, `authenticate`, `me`, and `sign_out`
    using session token authentication. JWT might work; I haven't tested yet.
    Submit a PR updating this bullet if you do!
+   For passkey support, additionally add `start_register_passkey`,
+   `finish_register_passkey`, `start_passkey_login`, and `passkey_login`
+   routes.
 5. For each route (See [example routes](./example/server/src/router.gleam)):
    1. Decode json payload
    2. Construct a Stytch client

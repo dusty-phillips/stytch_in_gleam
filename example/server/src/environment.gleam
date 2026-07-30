@@ -7,6 +7,7 @@ pub type Environment {
     secret_key_base: String,
     stytch_project_id: String,
     stytch_secret: String,
+    stytch_domain: String,
   )
 }
 
@@ -19,5 +20,9 @@ pub fn load_env() -> Result(Environment, env.Error) {
   use stytch_project_id <- result.try(env.string("STYTCH_PROJECT_ID"))
   use stytch_secret <- result.try(env.string("STYTCH_SECRET"))
 
-  Ok(Environment(secret_key_base:, stytch_project_id:, stytch_secret:))
+  // The WebAuthn relying-party domain is server configuration; the browser
+  // must not assert it. Defaults to localhost for development.
+  let stytch_domain = result.unwrap(env.string("STYTCH_DOMAIN"), "localhost")
+
+  Ok(Environment(secret_key_base:, stytch_project_id:, stytch_secret:, stytch_domain:))
 }

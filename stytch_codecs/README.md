@@ -7,8 +7,8 @@
 Shared types used to construct requests to or responses from the
 [Stytch](https://stytch.com) authentication service.
 
-Currently contains all types needed to support magic link and one time passcode
-authentication requests.
+Currently contains all types needed to support magic link, one time passcode,
+and passkey (WebAuthn) authentication requests.
 
 This package isn't very useful on its own; it is meant to share types between
 JS frontend and JS or Erlang backend code. Use it in conjunction with the

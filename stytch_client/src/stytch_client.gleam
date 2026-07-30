@@ -151,6 +151,98 @@ pub fn passcode_authenticate(
   parse_stytch_response(response, stytch_codecs.authenticate_response_decoder())
 }
 
+/// Start registration of a webauthn passkey for an identified user.
+///
+/// The user_id must be authenticated already using one of the e-mail verified
+/// options.
+pub fn passkey_registration_start(
+  client: StytchClient,
+  request_data: stytch_codecs.PasskeyRegisterStartRequest,
+) -> Result(stytch_codecs.PasskeyRegisterStartResponse, StytchError) {
+  let data =
+    request_data |> stytch_codecs.passkey_register_start_request_to_json
+
+  let request =
+    make_stytch_request(client, http.Post, "/v1/webauthn/register/start", data)
+
+  use response <- result.try(
+    httpc.send(request) |> result.map_error(HttpcError),
+  )
+  parse_stytch_response(
+    response,
+    stytch_codecs.passkey_register_start_response_decoder(),
+  )
+}
+
+/// Complete registration of a webauthn passkey, passing the credential the
+/// browser created with `navigator.credentials.create()` as a JSON string.
+pub fn passkey_registration_finish(
+  client: StytchClient,
+  request_data: stytch_codecs.PasskeyRegisterFinishRequest,
+) -> Result(stytch_codecs.PasskeySessionResponse, StytchError) {
+  let data =
+    request_data |> stytch_codecs.passkey_register_finish_request_to_json
+
+  let request =
+    make_stytch_request(client, http.Post, "/v1/webauthn/register", data)
+
+  use response <- result.try(
+    httpc.send(request) |> result.map_error(HttpcError),
+  )
+  parse_stytch_response(
+    response,
+    stytch_codecs.passkey_session_response_decoder(),
+  )
+}
+
+/// Start passkey authentication for an unknown user. The browser's passkey
+/// picker identifies the user via discoverable credentials, so no user_id
+/// is required.
+pub fn passkey_authenticate_start(
+  client: StytchClient,
+  request_data: stytch_codecs.PasskeyAuthenticateStartRequest,
+) -> Result(stytch_codecs.PasskeyAuthenticateStartResponse, StytchError) {
+  let data =
+    request_data |> stytch_codecs.passkey_authenticate_start_request_to_json
+
+  let request =
+    make_stytch_request(
+      client,
+      http.Post,
+      "/v1/webauthn/authenticate/start",
+      data,
+    )
+
+  use response <- result.try(
+    httpc.send(request) |> result.map_error(HttpcError),
+  )
+  parse_stytch_response(
+    response,
+    stytch_codecs.passkey_authenticate_start_response_decoder(),
+  )
+}
+
+/// Complete passkey authentication, passing the credential the browser
+/// returned from `navigator.credentials.get()` as a JSON string.
+pub fn passkey_authenticate(
+  client: StytchClient,
+  request_data: stytch_codecs.PasskeyAuthenticateRequest,
+) -> Result(stytch_codecs.PasskeySessionResponse, StytchError) {
+  let data =
+    request_data |> stytch_codecs.passkey_authenticate_request_to_json
+
+  let request =
+    make_stytch_request(client, http.Post, "/v1/webauthn/authenticate", data)
+
+  use response <- result.try(
+    httpc.send(request) |> result.map_error(HttpcError),
+  )
+  parse_stytch_response(
+    response,
+    stytch_codecs.passkey_session_response_decoder(),
+  )
+}
+
 /// Authenticate a session token previously returned from a passcode or magic
 /// link authentication flow.
 pub fn session_authenticate(

@@ -1,5 +1,6 @@
 import gleam/dynamic/decode
 import gleam/json
+import gleam/option
 import gleeunit
 import stytch_codecs
 
@@ -103,7 +104,7 @@ pub fn magic_link_authenticate_response_test() {
 }
 
 pub fn session_authenticate_response_test() {
-  // note: also implicitly tests StytchUser, Name, and Email
+  // note: also implicitly tests StytchUser, Name, Email, WebAuthnRegistration
   let value =
     stytch_codecs.SessionAuthenticateResponse(
       404,
@@ -112,6 +113,16 @@ pub fn session_authenticate_response_test() {
         "some_user_id",
         stytch_codecs.Name("Some", "body", "here"),
         [stytch_codecs.Email("some_email_id", "some@body.here", True)],
+        [
+          stytch_codecs.WebAuthnRegistration(
+            "some_registration_id",
+            "example.com",
+            "some user agent",
+            True,
+            "platform",
+            "My Passkey",
+          ),
+        ],
       ),
       "some_session_token",
       "well_it_would_be_a_jwt",
@@ -150,3 +161,141 @@ pub fn session_revoke_response_test() {
 
   assert round_trip_value == Ok(value)
 }
+
+pub fn passkey_credential_payload_test() {
+  let value =
+    stytch_codecs.PasskeyCredentialPayload("{\"type\":\"public-key\"}")
+  let round_trip_value =
+    round_trip(
+      value,
+      stytch_codecs.passkey_credential_payload_to_json,
+      stytch_codecs.passkey_credential_payload_decoder(),
+    )
+
+  assert round_trip_value == Ok(value)
+}
+
+pub fn passkey_register_start_request_test() {
+  let value =
+    stytch_codecs.PasskeyRegisterStartRequest(
+      "some_user_id",
+      "example.com",
+      True,
+      True,
+      option.Some("Mozilla/5.0"),
+    )
+  let round_trip_value =
+    round_trip(
+      value,
+      stytch_codecs.passkey_register_start_request_to_json,
+      stytch_codecs.passkey_register_start_request_decoder(),
+    )
+
+  assert round_trip_value == Ok(value)
+}
+
+pub fn passkey_register_start_response_test() {
+  let value =
+    stytch_codecs.PasskeyRegisterStartResponse(
+      "some_request_id",
+      "some_user_id",
+      "{\"challenge\":\"abc\"}",
+      200,
+    )
+  let round_trip_value =
+    round_trip(
+      value,
+      stytch_codecs.passkey_register_start_response_to_json,
+      stytch_codecs.passkey_register_start_response_decoder(),
+    )
+
+  assert round_trip_value == Ok(value)
+}
+
+pub fn passkey_register_finish_request_test() {
+  let value =
+    stytch_codecs.PasskeyRegisterFinishRequest(
+      "some_user_id",
+      "{\"type\":\"public-key\"}",
+      60,
+    )
+  let round_trip_value =
+    round_trip(
+      value,
+      stytch_codecs.passkey_register_finish_request_to_json,
+      stytch_codecs.passkey_register_finish_request_decoder(),
+    )
+
+  assert round_trip_value == Ok(value)
+}
+
+pub fn passkey_session_response_test() {
+  let value =
+    stytch_codecs.PasskeySessionResponse(
+      "some_request_id",
+      "some_user_id",
+      "some_registration_id",
+      "some_session_token",
+      "well_it_would_be_a_jwt",
+      stytch_codecs.StytchUser(
+        "some_user_id",
+        stytch_codecs.Name("Some", "body", "here"),
+        [stytch_codecs.Email("some_email_id", "some@body.here", True)],
+        [],
+      ),
+      200,
+    )
+  let round_trip_value =
+    round_trip(
+      value,
+      stytch_codecs.passkey_session_response_to_json,
+      stytch_codecs.passkey_session_response_decoder(),
+    )
+
+  assert round_trip_value == Ok(value)
+}
+
+pub fn passkey_authenticate_start_request_test() {
+  let value =
+    stytch_codecs.PasskeyAuthenticateStartRequest("example.com", True, True)
+  let round_trip_value =
+    round_trip(
+      value,
+      stytch_codecs.passkey_authenticate_start_request_to_json,
+      stytch_codecs.passkey_authenticate_start_request_decoder(),
+    )
+
+  assert round_trip_value == Ok(value)
+}
+
+pub fn passkey_authenticate_start_response_test() {
+  let value =
+    stytch_codecs.PasskeyAuthenticateStartResponse(
+      "some_request_id",
+      "some_user_id",
+      "{\"challenge\":\"abc\"}",
+      200,
+    )
+  let round_trip_value =
+    round_trip(
+      value,
+      stytch_codecs.passkey_authenticate_start_response_to_json,
+      stytch_codecs.passkey_authenticate_start_response_decoder(),
+    )
+
+  assert round_trip_value == Ok(value)
+}
+
+pub fn passkey_authenticate_request_test() {
+  let value =
+    stytch_codecs.PasskeyAuthenticateRequest("{\"type\":\"public-key\"}", 60)
+  let round_trip_value =
+    round_trip(
+      value,
+      stytch_codecs.passkey_authenticate_request_to_json,
+      stytch_codecs.passkey_authenticate_request_decoder(),
+    )
+
+  assert round_trip_value == Ok(value)
+}
+

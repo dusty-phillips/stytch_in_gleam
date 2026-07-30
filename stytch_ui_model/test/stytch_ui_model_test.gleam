@@ -1,10 +1,14 @@
+import gleam/http/response
 import gleeunit
 import lustre/effect
+import rsvp
 import stytch_codecs
 import stytch_ui_model.{
-  ApiAuthenticatedUser, ApiConfirmsUnauthenticated, ApiSentMagicLink, AuthModel,
-  Authenticated, MagicLink, Unauthenticated, UserClickedSend,
-  UserClickedSignOut, UserUpdatedEmail, WaitingForMagicLink,
+  ApiAuthenticatedUser, ApiConfirmsUnauthenticated, ApiSentMagicLink,
+  ApiStartedPasskeyRegister, AuthModel, Authenticated, MagicLink, PasskeyIdle,
+  PasskeyLoginInProgress, PasskeyRegisterFailed, StartingPasskeyRegister,
+  Unauthenticated, UserClickedAddPasskey, UserClickedPasskeySignIn,
+  UserClickedSend, UserClickedSignOut, UserUpdatedEmail, WaitingForMagicLink,
 }
 
 pub fn main() {
@@ -26,6 +30,7 @@ fn test_user(email: String, verified: Bool) -> stytch_codecs.StytchUser {
         verified: verified,
       ),
     ],
+    webauthn_registrations: [],
   )
 }
 
@@ -53,7 +58,7 @@ pub fn authenticating_to_authenticated_test() {
   let user = test_user("test@example.com", True)
   let #(updated, eff) = stytch_ui_model.update(model, ApiAuthenticatedUser(user))
 
-  assert updated.state == Authenticated(user)
+  assert updated.state == Authenticated(user, PasskeyIdle)
   assert eff == effect.none()
 }
 
@@ -84,10 +89,11 @@ pub fn authenticated_multiple_emails_test() {
           verified: True,
         ),
       ],
+      webauthn_registrations: [],
     )
   let #(updated, _) = stytch_ui_model.update(model, ApiAuthenticatedUser(user))
 
-  assert updated.state == Authenticated(user)
+  assert updated.state == Authenticated(user, PasskeyIdle)
 }
 
 pub fn user_updated_email_test() {
@@ -129,7 +135,7 @@ pub fn sign_out_test() {
   let model =
     AuthModel(
       "http://api.test",
-      Authenticated(test_user("test@example.com", True)),
+      Authenticated(test_user("test@example.com", True), PasskeyIdle),
       MagicLink,
     )
   let #(updated, eff) = stytch_ui_model.update(model, UserClickedSignOut)
@@ -143,4 +149,42 @@ pub fn api_url_preserved_test() {
   let #(updated, _) = stytch_ui_model.update(model, ApiConfirmsUnauthenticated)
 
   assert updated.api_url == "http://custom.api"
+}
+
+pub fn user_clicked_passkey_sign_in_test() {
+  let model = AuthModel("http://api.test", Unauthenticated(""), MagicLink)
+  let #(updated, eff) =
+    stytch_ui_model.update(model, UserClickedPasskeySignIn)
+
+  assert updated.state == PasskeyLoginInProgress
+  assert eff != effect.none()
+}
+
+pub fn user_clicked_add_passkey_test() {
+  let user = test_user("test@example.com", True)
+  let model =
+    AuthModel("http://api.test", Authenticated(user, PasskeyIdle), MagicLink)
+  let #(updated, eff) = stytch_ui_model.update(model, UserClickedAddPasskey)
+
+  assert updated.state == Authenticated(user, StartingPasskeyRegister)
+  assert eff != effect.none()
+}
+
+pub fn api_started_passkey_register_error_test() {
+  let user = test_user("test@example.com", True)
+  let model =
+    AuthModel(
+      "http://api.test",
+      Authenticated(user, StartingPasskeyRegister),
+      MagicLink,
+    )
+  let #(updated, eff) =
+    stytch_ui_model.update(
+      model,
+      ApiStartedPasskeyRegister(Error(rsvp.HttpError(response.new(500)))),
+    )
+
+  assert updated.state
+    == Authenticated(user, PasskeyRegisterFailed("could not reach server"))
+  assert eff == effect.none()
 }

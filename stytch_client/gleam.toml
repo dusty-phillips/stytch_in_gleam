@@ -11,7 +11,8 @@ repository = { type = "github", user = "dusty-phillips", repo = "stytch_in_gleam
 
 [dependencies]
 gleam_stdlib = ">= 0.44.0 and < 2.0.0"
-stytch_codecs = "== 1.0.0-rc1"
+# stytch_codecs = "== 1.0.0-rc1"
+stytch_codecs = {path="../stytch_codecs"}
 gleam_httpc = ">= 5.0.0 and < 6.0.0"
 gleam_http = ">= 4.3.0 and < 5.0.0"
 gleam_json = ">= 3.1.0 and < 4.0.0"

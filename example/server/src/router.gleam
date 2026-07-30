@@ -1,6 +1,8 @@
 import environment
 import gleam/http
+import gleam/http/request as http_request
 import gleam/json
+import gleam/option
 import handler_utils
 import lustre/attribute
 import lustre/element
@@ -26,6 +28,18 @@ pub fn handle_request(
 
     http.Post, ["api", "verify_passcode"] ->
       handle_verify_passcode(environment, request)
+
+    http.Post, ["api", "start_register_passkey"] ->
+      handle_start_register_passkey(environment, request)
+
+    http.Post, ["api", "finish_register_passkey"] ->
+      handle_finish_register_passkey(environment, request)
+
+    http.Post, ["api", "start_passkey_login"] ->
+      handle_start_passkey_login(environment, request)
+
+    http.Post, ["api", "passkey_login"] ->
+      handle_passkey_login(environment, request)
 
     http.Get, ["api", "sign_out"] -> handle_sign_out(environment, request)
 
@@ -163,11 +177,126 @@ fn handle_verify_passcode(
   }
 }
 
+// Session lifetime for newly created Stytch sessions. Session policy is
+// decided by the server, never asserted by the browser.
+const session_duration_minutes = 7200
+
+fn handle_start_register_passkey(
+  environment: environment.Environment,
+  request: Request,
+) -> Response {
+  use user <- session_user_or_error_response(environment, request)
+
+  let user_agent =
+    request
+    |> http_request.get_header("user-agent")
+    |> option.from_result
+
+  let stytch_response =
+    environment
+    |> test_stytch_client()
+    |> stytch_client.passkey_registration_start(stytch_codecs.PasskeyRegisterStartRequest(
+      user_id: user.user_id,
+      domain: environment.stytch_domain,
+      use_base64_url_encoding: True,
+      return_passkey_credential_options: True,
+      user_agent:,
+    ))
+
+  case stytch_response {
+    Ok(response) ->
+      response
+      |> stytch_codecs.passkey_register_start_response_to_json
+      |> json.to_string
+      |> wisp.json_response(200)
+    Error(stytch_error) -> stytch_error_to_response(stytch_error)
+  }
+}
+
+fn handle_finish_register_passkey(
+  environment: environment.Environment,
+  request: Request,
+) -> Response {
+  use user <- session_user_or_error_response(environment, request)
+  use data <- handler_utils.decode_or_422_response(
+    request,
+    stytch_codecs.passkey_credential_payload_decoder(),
+  )
+
+  let stytch_response =
+    environment
+    |> test_stytch_client()
+    |> stytch_client.passkey_registration_finish(stytch_codecs.PasskeyRegisterFinishRequest(
+      user_id: user.user_id,
+      public_key_credential: data.public_key_credential,
+      session_duration_minutes:,
+    ))
+
+  case stytch_response {
+    Ok(response) ->
+      response
+      |> stytch_codecs.passkey_session_response_to_json
+      |> json.to_string
+      |> wisp.json_response(200)
+    Error(stytch_error) -> stytch_error_to_response(stytch_error)
+  }
+}
+
+fn handle_start_passkey_login(
+  environment: environment.Environment,
+  _request: Request,
+) -> Response {
+  let stytch_response =
+    environment
+    |> test_stytch_client()
+    |> stytch_client.passkey_authenticate_start(stytch_codecs.PasskeyAuthenticateStartRequest(
+      domain: environment.stytch_domain,
+      use_base64_url_encoding: True,
+      return_passkey_credential_options: True,
+    ))
+
+  case stytch_response {
+    Ok(response) ->
+      response
+      |> stytch_codecs.passkey_authenticate_start_response_to_json
+      |> json.to_string
+      |> wisp.json_response(200)
+    Error(stytch_error) -> stytch_error_to_response(stytch_error)
+  }
+}
+
+fn handle_passkey_login(
+  environment: environment.Environment,
+  request: Request,
+) -> Response {
+  use data <- handler_utils.decode_or_422_response(
+    request,
+    stytch_codecs.passkey_credential_payload_decoder(),
+  )
+
+  let stytch_response =
+    environment
+    |> test_stytch_client()
+    |> stytch_client.passkey_authenticate(stytch_codecs.PasskeyAuthenticateRequest(
+      public_key_credential: data.public_key_credential,
+      session_duration_minutes:,
+    ))
+
+  case stytch_response {
+    Ok(auth_response) ->
+      auth_response
+      |> stytch_codecs.passkey_session_response_to_json
+      |> json.to_string
+      |> wisp.json_response(200)
+      |> handler_utils.set_session_cookie(auth_response.session_token)
+    Error(stytch_error) -> stytch_error_to_response(stytch_error)
+  }
+}
+
 fn handle_authenticate_session(
   environment: environment.Environment,
   request: Request,
 ) -> Response {
-  echo request
   use session_token <- handler_utils.session_token_or_forbidden_response(
     request,
   )
@@ -176,8 +305,6 @@ fn handle_authenticate_session(
     environment
     |> test_stytch_client()
     |> stytch_client.session_authenticate(session_token, 60)
-
-  echo stytch_response
 
   case stytch_response {
     Ok(session_response) ->
@@ -209,6 +336,30 @@ fn handle_sign_out(
 }
 
 // Helpers
+
+/// Authenticate the request's session token against Stytch and pass the
+/// verified user to the handler. Identity for passkey operations always
+/// comes from the session, never from the request body.
+fn session_user_or_error_response(
+  environment: environment.Environment,
+  request: Request,
+  continue: fn(stytch_codecs.StytchUser) -> Response,
+) -> Response {
+  use session_token <- handler_utils.session_token_or_forbidden_response(
+    request,
+  )
+
+  let stytch_response =
+    environment
+    |> test_stytch_client()
+    |> stytch_client.session_authenticate(session_token, 60)
+
+  case stytch_response {
+    Ok(session_response) -> continue(session_response.user)
+    Error(stytch_error) -> stytch_error_to_response(stytch_error)
+  }
+}
+
 fn test_stytch_client(
   environment: environment.Environment,
 ) -> stytch_client.StytchClient {
