@@ -1,5 +1,5 @@
 name = "stytch_codecs"
-version = "1.0.0-rc1"
+version = "1.0.0-rc2"
 
 description = "Shared types for use with the Stytch Authentication API. Magic Link and Passcode auth supported. For use with stytch_client package."
 licences = ["Apache-2.0"]
