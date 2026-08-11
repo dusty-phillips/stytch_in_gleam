@@ -1,5 +1,5 @@
 name = "stytch_codecs"
-version = "1.0.0-rc2"
+version = "1.0.0-rc3"
 
 description = "Shared types for use with the Stytch Authentication API. Magic Link and Passcode auth supported. For use with stytch_client package."
 licences = ["Apache-2.0"]
@@ -10,7 +10,7 @@ repository = { type = "github", user = "dusty-phillips", repo = "stytch_in_gleam
 # https://gleam.run/writing-gleam/gleam-toml/.
 
 [dependencies]
-gleam_stdlib = ">= 0.44.0 and < 2.0.0"
+gleam_stdlib = ">= 1.0.0 and < 2.0.0"
 gleam_json = ">= 3.1.0 and < 4.0.0"
 
 [dev-dependencies]
