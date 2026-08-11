@@ -67,11 +67,16 @@ pub fn view_passkeys(
     stytch.StartingPasskeyRegister ->
       html.p([], [html.text("Contacting server...")])
     stytch.CreatingPasskeyCredential ->
-      html.p([], [html.text("Follow your browser's prompt to create a passkey...")])
+      html.p([], [
+        html.text("Follow your browser's prompt to create a passkey..."),
+      ])
     stytch.FinishingPasskeyRegister ->
       html.p([], [html.text("Finishing passkey registration...")])
     stytch.PasskeyRegisterFailed(reason) ->
       html.p([], [html.text("Passkey registration failed: " <> reason)])
+    stytch.DeletingPasskey -> html.p([], [html.text("Deleting passkey...")])
+    stytch.DeletePasskeyFailed(reason) ->
+      html.p([], [html.text("Passkey deletion failed: " <> reason)])
   }
 
   html.div([], [
@@ -89,8 +94,7 @@ fn list_registration_items(
 ) -> element.Element(stytch.AuthMsg) {
   case registrations {
     [] -> html.p([], [html.text("No passkeys registered yet.")])
-    _ ->
-      html.ul([], list.map(registrations, view_registration_item))
+    _ -> html.ul([], list.map(registrations, view_registration_item))
   }
 }
 
@@ -109,6 +113,14 @@ fn view_registration_item(
       html.dt([], [html.text("Verified")]),
       html.dd([], [html.text(verified_label(registration.verified))]),
     ]),
+    html.button(
+      [
+        event.on_click(stytch.UserClickedDeletePasskey(
+          registration.webauthn_registration_id,
+        )),
+      ],
+      [html.text("Delete")],
+    ),
   ])
 }
 

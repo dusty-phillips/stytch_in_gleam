@@ -32,9 +32,9 @@ type Msg {
 }
 
 fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
-  case model, msg {
-    Model(auth_model), AuthMsg(auth_msg) -> {
-      let #(next_auth, effect) = stytch.update(auth_model, auth_msg)
+  case msg {
+    AuthMsg(auth_msg) -> {
+      let #(next_auth, effect) = stytch.update(model.auth, auth_msg)
       #(Model(auth: next_auth), effect.map(effect, AuthMsg))
     }
   }

@@ -24,5 +24,10 @@ pub fn load_env() -> Result(Environment, env.Error) {
   // must not assert it. Defaults to localhost for development.
   let stytch_domain = result.unwrap(env.string("STYTCH_DOMAIN"), "localhost")
 
-  Ok(Environment(secret_key_base:, stytch_project_id:, stytch_secret:, stytch_domain:))
+  Ok(Environment(
+    secret_key_base:,
+    stytch_project_id:,
+    stytch_secret:,
+    stytch_domain:,
+  ))
 }

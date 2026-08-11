@@ -719,6 +719,33 @@ pub fn passkey_authenticate_request_decoder() -> decode.Decoder(
 }
 
 // ============================================================================
+/// Response from Stytch when deleting a passkey (WebAuthn registration).
+pub type DeleteWebAuthnResponse {
+  DeleteWebAuthnResponse(request_id: String, user_id: String, status_code: Int)
+}
+
+pub fn delete_webauthn_response_to_json(
+  delete_webauthn_response: DeleteWebAuthnResponse,
+) -> json.Json {
+  let DeleteWebAuthnResponse(request_id:, user_id:, status_code:) =
+    delete_webauthn_response
+  json.object([
+    #("request_id", json.string(request_id)),
+    #("user_id", json.string(user_id)),
+    #("status_code", json.int(status_code)),
+  ])
+}
+
+pub fn delete_webauthn_response_decoder() -> decode.Decoder(
+  DeleteWebAuthnResponse,
+) {
+  use request_id <- decode.field("request_id", decode.string)
+  use user_id <- decode.field("user_id", decode.string)
+  use status_code <- decode.field("status_code", decode.int)
+  decode.success(DeleteWebAuthnResponse(request_id:, user_id:, status_code:))
+}
+
+// ============================================================================
 /// Request to revoke a session.
 ///
 /// Use for signout.

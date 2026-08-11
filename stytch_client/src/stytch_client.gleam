@@ -228,8 +228,7 @@ pub fn passkey_authenticate(
   client: StytchClient,
   request_data: stytch_codecs.PasskeyAuthenticateRequest,
 ) -> Result(stytch_codecs.PasskeySessionResponse, StytchError) {
-  let data =
-    request_data |> stytch_codecs.passkey_authenticate_request_to_json
+  let data = request_data |> stytch_codecs.passkey_authenticate_request_to_json
 
   let request =
     make_stytch_request(client, http.Post, "/v1/webauthn/authenticate", data)
@@ -240,6 +239,31 @@ pub fn passkey_authenticate(
   parse_stytch_response(
     response,
     stytch_codecs.passkey_session_response_decoder(),
+  )
+}
+
+/// Delete a passkey (WebAuthn registration) for a user.
+///
+/// The user should already be authenticated; the caller is responsible for
+/// confirming the registration belongs to the current user.
+pub fn passkey_delete(
+  client: StytchClient,
+  webauthn_registration_id: String,
+) -> Result(stytch_codecs.DeleteWebAuthnResponse, StytchError) {
+  let request =
+    make_stytch_request(
+      client,
+      http.Delete,
+      "/v1/webauthn/" <> webauthn_registration_id,
+      json.object([]),
+    )
+
+  use response <- result.try(
+    httpc.send(request) |> result.map_error(HttpcError),
+  )
+  parse_stytch_response(
+    response,
+    stytch_codecs.delete_webauthn_response_decoder(),
   )
 }
 

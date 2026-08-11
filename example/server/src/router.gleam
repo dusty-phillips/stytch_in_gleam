@@ -2,6 +2,7 @@ import environment
 import gleam/http
 import gleam/http/request as http_request
 import gleam/json
+import gleam/list
 import gleam/option
 import handler_utils
 import lustre/attribute
@@ -40,6 +41,9 @@ pub fn handle_request(
 
     http.Post, ["api", "passkey_login"] ->
       handle_passkey_login(environment, request)
+
+    http.Delete, ["api", "delete_passkey", webauthn_registration_id] ->
+      handle_delete_passkey(environment, request, webauthn_registration_id)
 
     http.Get, ["api", "sign_out"] -> handle_sign_out(environment, request)
 
@@ -195,13 +199,15 @@ fn handle_start_register_passkey(
   let stytch_response =
     environment
     |> test_stytch_client()
-    |> stytch_client.passkey_registration_start(stytch_codecs.PasskeyRegisterStartRequest(
-      user_id: user.user_id,
-      domain: environment.stytch_domain,
-      use_base64_url_encoding: True,
-      return_passkey_credential_options: True,
-      user_agent:,
-    ))
+    |> stytch_client.passkey_registration_start(
+      stytch_codecs.PasskeyRegisterStartRequest(
+        user_id: user.user_id,
+        domain: environment.stytch_domain,
+        use_base64_url_encoding: True,
+        return_passkey_credential_options: True,
+        user_agent:,
+      ),
+    )
 
   case stytch_response {
     Ok(response) ->
@@ -226,11 +232,13 @@ fn handle_finish_register_passkey(
   let stytch_response =
     environment
     |> test_stytch_client()
-    |> stytch_client.passkey_registration_finish(stytch_codecs.PasskeyRegisterFinishRequest(
-      user_id: user.user_id,
-      public_key_credential: data.public_key_credential,
-      session_duration_minutes:,
-    ))
+    |> stytch_client.passkey_registration_finish(
+      stytch_codecs.PasskeyRegisterFinishRequest(
+        user_id: user.user_id,
+        public_key_credential: data.public_key_credential,
+        session_duration_minutes:,
+      ),
+    )
 
   case stytch_response {
     Ok(response) ->
@@ -249,11 +257,13 @@ fn handle_start_passkey_login(
   let stytch_response =
     environment
     |> test_stytch_client()
-    |> stytch_client.passkey_authenticate_start(stytch_codecs.PasskeyAuthenticateStartRequest(
-      domain: environment.stytch_domain,
-      use_base64_url_encoding: True,
-      return_passkey_credential_options: True,
-    ))
+    |> stytch_client.passkey_authenticate_start(
+      stytch_codecs.PasskeyAuthenticateStartRequest(
+        domain: environment.stytch_domain,
+        use_base64_url_encoding: True,
+        return_passkey_credential_options: True,
+      ),
+    )
 
   case stytch_response {
     Ok(response) ->
@@ -277,10 +287,12 @@ fn handle_passkey_login(
   let stytch_response =
     environment
     |> test_stytch_client()
-    |> stytch_client.passkey_authenticate(stytch_codecs.PasskeyAuthenticateRequest(
-      public_key_credential: data.public_key_credential,
-      session_duration_minutes:,
-    ))
+    |> stytch_client.passkey_authenticate(
+      stytch_codecs.PasskeyAuthenticateRequest(
+        public_key_credential: data.public_key_credential,
+        session_duration_minutes:,
+      ),
+    )
 
   case stytch_response {
     Ok(auth_response) ->
@@ -290,6 +302,33 @@ fn handle_passkey_login(
       |> wisp.json_response(200)
       |> handler_utils.set_session_cookie(auth_response.session_token)
     Error(stytch_error) -> stytch_error_to_response(stytch_error)
+  }
+}
+
+fn handle_delete_passkey(
+  environment: environment.Environment,
+  request: Request,
+  webauthn_registration_id: String,
+) -> Response {
+  use user <- session_user_or_error_response(environment, request)
+
+  case
+    list.any(user.webauthn_registrations, fn(registration) {
+      registration.webauthn_registration_id == webauthn_registration_id
+    })
+  {
+    False -> wisp.not_found()
+    True -> {
+      let stytch_response =
+        environment
+        |> test_stytch_client()
+        |> stytch_client.passkey_delete(webauthn_registration_id)
+
+      case stytch_response {
+        Ok(_) -> wisp.ok()
+        Error(stytch_error) -> stytch_error_to_response(stytch_error)
+      }
+    }
   }
 }
 

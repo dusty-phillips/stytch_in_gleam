@@ -4,11 +4,13 @@ import lustre/effect
 import rsvp
 import stytch_codecs
 import stytch_ui_model.{
-  ApiAuthenticatedUser, ApiConfirmsUnauthenticated, ApiSentMagicLink,
-  ApiStartedPasskeyRegister, AuthModel, Authenticated, MagicLink, PasskeyIdle,
+  ApiAuthenticatedUser, ApiConfirmsUnauthenticated, ApiDeletedPasskey,
+  ApiSentMagicLink, ApiStartedPasskeyRegister, AuthModel, Authenticated,
+  Authenticating, DeletePasskeyFailed, DeletingPasskey, MagicLink, PasskeyIdle,
   PasskeyLoginInProgress, PasskeyRegisterFailed, StartingPasskeyRegister,
-  Unauthenticated, UserClickedAddPasskey, UserClickedPasskeySignIn,
-  UserClickedSend, UserClickedSignOut, UserUpdatedEmail, WaitingForMagicLink,
+  Unauthenticated, UserClickedAddPasskey, UserClickedDeletePasskey,
+  UserClickedPasskeySignIn, UserClickedSend, UserClickedSignOut,
+  UserUpdatedEmail, WaitingForMagicLink,
 }
 
 pub fn main() {
@@ -47,7 +49,8 @@ pub fn new_creates_authenticating_model_test() {
 
 pub fn authenticating_to_unauthenticated_test() {
   let model = stytch_ui_model.new("http://api.test", MagicLink)
-  let #(updated, eff) = stytch_ui_model.update(model, ApiConfirmsUnauthenticated)
+  let #(updated, eff) =
+    stytch_ui_model.update(model, ApiConfirmsUnauthenticated)
 
   assert updated.state == Unauthenticated("")
   assert eff == effect.none()
@@ -56,7 +59,8 @@ pub fn authenticating_to_unauthenticated_test() {
 pub fn authenticating_to_authenticated_test() {
   let model = stytch_ui_model.new("http://api.test", MagicLink)
   let user = test_user("test@example.com", True)
-  let #(updated, eff) = stytch_ui_model.update(model, ApiAuthenticatedUser(user))
+  let #(updated, eff) =
+    stytch_ui_model.update(model, ApiAuthenticatedUser(user))
 
   assert updated.state == Authenticated(user, PasskeyIdle)
   assert eff == effect.none()
@@ -116,7 +120,11 @@ pub fn send_magic_link_test() {
 
 pub fn api_sent_magic_link_test() {
   let model =
-    AuthModel("http://api.test", WaitingForMagicLink("test@example.com"), MagicLink)
+    AuthModel(
+      "http://api.test",
+      WaitingForMagicLink("test@example.com"),
+      MagicLink,
+    )
   let response =
     stytch_codecs.LoginOrCreateResponse(
       status_code: 200,
@@ -153,8 +161,7 @@ pub fn api_url_preserved_test() {
 
 pub fn user_clicked_passkey_sign_in_test() {
   let model = AuthModel("http://api.test", Unauthenticated(""), MagicLink)
-  let #(updated, eff) =
-    stytch_ui_model.update(model, UserClickedPasskeySignIn)
+  let #(updated, eff) = stytch_ui_model.update(model, UserClickedPasskeySignIn)
 
   assert updated.state == PasskeyLoginInProgress
   assert eff != effect.none()
@@ -186,5 +193,50 @@ pub fn api_started_passkey_register_error_test() {
 
   assert updated.state
     == Authenticated(user, PasskeyRegisterFailed("could not reach server"))
+  assert eff == effect.none()
+}
+
+pub fn user_clicked_delete_passkey_test() {
+  let user = test_user("test@example.com", True)
+  let model =
+    AuthModel("http://api.test", Authenticated(user, PasskeyIdle), MagicLink)
+  let #(updated, eff) =
+    stytch_ui_model.update(model, UserClickedDeletePasskey("registration-123"))
+
+  assert updated.state == Authenticated(user, DeletingPasskey)
+  assert eff != effect.none()
+}
+
+pub fn api_deleted_passkey_ok_test() {
+  let user = test_user("test@example.com", True)
+  let model =
+    AuthModel(
+      "http://api.test",
+      Authenticated(user, DeletingPasskey),
+      MagicLink,
+    )
+  let #(updated, eff) =
+    stytch_ui_model.update(model, ApiDeletedPasskey(Ok(response.new(200))))
+
+  assert updated.state == Authenticating
+  assert eff != effect.none()
+}
+
+pub fn api_deleted_passkey_error_test() {
+  let user = test_user("test@example.com", True)
+  let model =
+    AuthModel(
+      "http://api.test",
+      Authenticated(user, DeletingPasskey),
+      MagicLink,
+    )
+  let #(updated, eff) =
+    stytch_ui_model.update(
+      model,
+      ApiDeletedPasskey(Error(rsvp.HttpError(response.new(500)))),
+    )
+
+  assert updated.state
+    == Authenticated(user, DeletePasskeyFailed("could not reach server"))
   assert eff == effect.none()
 }

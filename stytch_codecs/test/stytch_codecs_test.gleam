@@ -138,6 +138,19 @@ pub fn session_authenticate_response_test() {
   assert round_trip_value == Ok(value)
 }
 
+pub fn delete_webauthn_response_test() {
+  let value =
+    stytch_codecs.DeleteWebAuthnResponse("some_request_id", "some_user_id", 200)
+  let round_trip_value =
+    round_trip(
+      value,
+      stytch_codecs.delete_webauthn_response_to_json,
+      stytch_codecs.delete_webauthn_response_decoder(),
+    )
+
+  assert round_trip_value == Ok(value)
+}
+
 pub fn session_revoke_request_test() {
   let value = stytch_codecs.SessionRevokeRequest("some_weird_token")
   let round_trip_value =
@@ -298,4 +311,3 @@ pub fn passkey_authenticate_request_test() {
 
   assert round_trip_value == Ok(value)
 }
-

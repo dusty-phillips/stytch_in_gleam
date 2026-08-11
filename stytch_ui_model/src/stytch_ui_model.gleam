@@ -32,7 +32,7 @@ pub type AuthState {
   Authenticated(user: stytch_codecs.StytchUser, passkey_state: PasskeyState)
 }
 
-/// Status of an in-flight passkey registration for an authenticated user.
+/// Status of an in-flight passkey operation for an authenticated user.
 /// The list of already-registered passkeys is available on the user as
 /// `user.webauthn_registrations`.
 pub type PasskeyState {
@@ -41,6 +41,8 @@ pub type PasskeyState {
   CreatingPasskeyCredential
   FinishingPasskeyRegister
   PasskeyRegisterFailed(reason: String)
+  DeletingPasskey
+  DeletePasskeyFailed(reason: String)
 }
 
 pub type AuthMsg {
@@ -75,6 +77,9 @@ pub type AuthMsg {
   ApiFinishedPasskeyRegister(
     Result(stytch_codecs.PasskeySessionResponse, rsvp.Error),
   )
+
+  UserClickedDeletePasskey(webauthn_registration_id: String)
+  ApiDeletedPasskey(Result(response.Response(String), rsvp.Error))
 
   UserClickedSignOut
 }
@@ -297,6 +302,16 @@ fn update_authenticated(
       effect.none(),
     )
 
+    UserClickedDeletePasskey(webauthn_registration_id) -> #(
+      Authenticated(user, DeletingPasskey),
+      delete_passkey(api_url, webauthn_registration_id),
+    )
+    ApiDeletedPasskey(Ok(_)) -> #(Authenticating, get_me(api_url))
+    ApiDeletedPasskey(Error(_)) -> #(
+      Authenticated(user, DeletePasskeyFailed("could not reach server")),
+      effect.none(),
+    )
+
     _ -> #(Authenticated(user, passkey_state), effect.none())
   }
 }
@@ -395,7 +410,9 @@ fn finish_register_passkey(
   let url = api_url <> "/finish_register_passkey"
 
   let json =
-    stytch_codecs.PasskeyCredentialPayload(public_key_credential: credential_json)
+    stytch_codecs.PasskeyCredentialPayload(
+      public_key_credential: credential_json,
+    )
     |> stytch_codecs.passkey_credential_payload_to_json
 
   let handler =
@@ -426,7 +443,9 @@ fn finish_passkey_login(
   let url = api_url <> "/passkey_login"
 
   let json =
-    stytch_codecs.PasskeyCredentialPayload(public_key_credential: credential_json)
+    stytch_codecs.PasskeyCredentialPayload(
+      public_key_credential: credential_json,
+    )
     |> stytch_codecs.passkey_credential_payload_to_json
 
   let handler =
@@ -436,6 +455,17 @@ fn finish_passkey_login(
     )
 
   rsvp.post(url, json, handler)
+}
+
+fn delete_passkey(
+  api_url: String,
+  webauthn_registration_id: String,
+) -> effect.Effect(AuthMsg) {
+  let url = api_url <> "/delete_passkey/" <> webauthn_registration_id
+
+  let handler = rsvp.expect_ok_response(ApiDeletedPasskey)
+
+  rsvp.delete(url, json.object([]), handler)
 }
 
 fn create_passkey_credential(

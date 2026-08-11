@@ -44,8 +44,8 @@ auth and modem routes can live together.
    using session token authentication. JWT might work; I haven't tested yet.
    Submit a PR updating this bullet if you do!
    For passkey support, additionally add `start_register_passkey`,
-   `finish_register_passkey`, `start_passkey_login`, and `passkey_login`
-   routes.
+   `finish_register_passkey`, `start_passkey_login`, `passkey_login`, and
+   `delete_passkey` routes.
 5. For each route (See [example routes](./example/server/src/router.gleam)):
    1. Decode json payload
    2. Construct a Stytch client
